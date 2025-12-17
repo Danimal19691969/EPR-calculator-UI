@@ -1,35 +1,129 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from "react";
+import { calculateEPR, fetchMaterials } from "./services/api";
+import type { Material } from "./services/api";
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [state, setState] = useState("Colorado");
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [materialCode, setMaterialCode] = useState("");
+  const [weight, setWeight] = useState(100);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [materialsLoading, setMaterialsLoading] = useState(false);
+  const [materialsError, setMaterialsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMaterials() {
+      setMaterialsLoading(true);
+      setMaterialsError(null);
+      setMaterialCode("");
+      setMaterials([]);
+
+      try {
+        const data = await fetchMaterials(state);
+        if (!cancelled) {
+          setMaterials(data);
+          if (data.length > 0) {
+            setMaterialCode(data[0].material_code);
+          }
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          setMaterialsError(err.message || "Failed to load materials");
+        }
+      } finally {
+        if (!cancelled) {
+          setMaterialsLoading(false);
+        }
+      }
+    }
+
+    loadMaterials();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [state]);
+
+  async function handleCalculate() {
+    setError(null);
+    if (!materialCode) {
+      setError("Please select a material");
+      return;
+    }
+    try {
+      const res = await calculateEPR({
+        state,
+        material: materialCode,
+        weight_lbs: weight,
+      });
+
+      setResult(res);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div style={{ padding: 40, fontFamily: "sans-serif" }}>
+      <h1>EPR Fee Calculator</h1>
 
-export default App
+      <label>
+        State:
+        <select value={state} onChange={(e) => setState(e.target.value)}>
+          <option value="Colorado">Colorado</option>
+          <option value="Oregon">Oregon</option>
+        </select>
+      </label>
+
+      <br /><br />
+
+      <label>
+        Material:
+        {materialsLoading ? (
+          <span> Loading...</span>
+        ) : materialsError ? (
+          <span style={{ color: "red" }}> {materialsError}</span>
+        ) : materials.length === 0 ? (
+          <span> No materials available for this state</span>
+        ) : (
+          <select
+            value={materialCode}
+            onChange={(e) => setMaterialCode(e.target.value)}
+          >
+            {materials.map((m) => (
+              <option key={m.material_code} value={m.material_code}>
+                {m.material_name}
+              </option>
+            ))}
+          </select>
+        )}
+      </label>
+
+      <br /><br />
+
+      <label>
+        Weight (lbs):
+        <input
+          type="number"
+          value={weight}
+          onChange={(e) => setWeight(Number(e.target.value))}
+        />
+      </label>
+
+      <br /><br />
+
+      <button onClick={handleCalculate}>Calculate</button>
+
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
+      {result && (
+        <pre style={{ marginTop: 20 }}>
+          {JSON.stringify(result, null, 2)}
+        </pre>
+      )}
+    </div>
+  );
+}
