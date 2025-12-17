@@ -40,3 +40,109 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Fee Breakdown Component */
+.fee-breakdown {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.fee-display {
+  padding: 1.5rem;
+  border-radius: 8px;
+  background-color: #1a1a1a;
+  margin-bottom: 1rem;
+}
+
+.fee-display-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: #888;
+  margin-bottom: 0.5rem;
+}
+
+.fee-display-main {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #4ade80;
+}
+
+.fee-display-info {
+  font-size: 0.875rem;
+  color: #888;
+  margin-top: 0.5rem;
+}
+
+.fee-explanation {
+  padding: 1.5rem;
+  border-radius: 8px;
+  background-color: #1a1a1a;
+  text-align: left;
+}
+
+.fee-explanation-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: #888;
+  margin-bottom: 1rem;
+}
+
+.fee-explanation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fee-line-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fee-line-label {
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.fee-line-value {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.fee-line-bonus .fee-line-value {
+  color: #4ade80;
+}
+
+.fee-line-total {
+  padding-top: 0.75rem;
+  border-top: 1px solid #333;
+  font-weight: 600;
+}
+
+.fee-program-info {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #333;
+  font-size: 0.75rem;
+  color: #888;
+}
+
+@media (prefers-color-scheme: light) {
+  .fee-display,
+  .fee-explanation {
+    background-color: #f5f5f5;
+  }
+
+  .fee-line-total {
+    border-top-color: #ddd;
+  }
+
+  .fee-program-info {
+    border-top-color: #ddd;
+  }
+
+  .fee-line-label {
+    color: #213547;
+  }
+}

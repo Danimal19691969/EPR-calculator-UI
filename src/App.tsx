@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { calculateEPR, fetchMaterials } from "./services/api";
-import type { Material } from "./services/api";
+import type { Material, CalculateResponse } from "./services/api";
+import FeeBreakdown from "./components/FeeBreakdown";
+import "./App.css";
 
 export default function App() {
   const [state, setState] = useState("Colorado");
   const [materials, setMaterials] = useState<Material[]>([]);
   const [materialCode, setMaterialCode] = useState("");
   const [weight, setWeight] = useState(100);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<CalculateResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [materialsLoading, setMaterialsLoading] = useState(false);
   const [materialsError, setMaterialsError] = useState<string | null>(null);
@@ -119,11 +121,7 @@ export default function App() {
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {result && (
-        <pre style={{ marginTop: 20 }}>
-          {JSON.stringify(result, null, 2)}
-        </pre>
-      )}
+      <FeeBreakdown result={result} />
     </div>
   );
 }

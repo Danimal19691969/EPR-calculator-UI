@@ -21,14 +21,20 @@ export interface CalculateRequest {
 }
 
 
+export interface LCABonus {
+  type: "none" | "bonus_a" | "bonus_b";
+  amount: number;
+  tier?: string;
+}
+
 export interface CalculateResponse {
   state: string;
-  base_fee: number;
+  weight_lbs: number;
+  initial_fee: number;
+  lca_bonus: LCABonus;
   total_fee: number;
-  adjustments?: {
-    name: string;
-    amount: number;
-  }[];
+  status: string;
+  program_start: string | null;
 }
 
 export async function fetchMaterials(state: string): Promise<Material[]> {
