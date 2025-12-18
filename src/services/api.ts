@@ -14,9 +14,19 @@ export interface Material {
   compostable: boolean;
 }
 
+/**
+ * API request payload for EPR fee calculation.
+ *
+ * NOTE: The API always expects weight in pounds (weight_lbs).
+ * Metric support intentionally deferred.
+ * When adding KG input, convert to LBS before calling this API:
+ *   import { toLbs, createWeight } from '../utils/weight';
+ *   weight_lbs: toLbs(createWeight(userValue, userUnit))
+ */
 export interface CalculateRequest {
   state: string;
   material: string;
+  /** Weight in pounds - the authoritative unit for all calculations */
   weight_lbs: number;
 }
 

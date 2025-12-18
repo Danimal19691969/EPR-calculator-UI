@@ -1,49 +1,164 @@
+/* Calculator Page Layout */
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem 3rem;
+  box-sizing: border-box;
+}
+
+/* ============================================
+   CALCULATOR SHELL - Physical Device Housing
+   ============================================ */
+.calculator-shell {
+  width: 100%;
+  max-width: 380px;
+  min-height: 70vh;
+
+  /* Gunmetal gradient - subtle vertical shading */
+  background:
+    linear-gradient(
+      180deg,
+      #2d333b 0%,
+      #22272e 8%,
+      #1c2128 50%,
+      #161b22 100%
+    );
+
+  /* Rounded device corners */
+  border-radius: 16px;
+
+  /* Edge bevel - light top, dark bottom */
+  border: 1px solid transparent;
+  border-top-color: rgba(99, 110, 123, 0.25);
+  border-bottom-color: rgba(0, 0, 0, 0.4);
+
+  /* Layered shadow for weight and lift */
+  box-shadow:
+    /* Outer ambient shadow */
+    0 4px 6px rgba(0, 0, 0, 0.15),
+    0 12px 24px rgba(0, 0, 0, 0.25),
+    0 24px 48px rgba(0, 0, 0, 0.2),
+    /* Inner edge highlight - stronger top bevel */
+    inset 0 1px 0 rgba(139, 148, 158, 0.2),
+    inset 0 2px 0 rgba(99, 110, 123, 0.1),
+    /* Inner edge shadow - bottom weight */
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+
+  /* Subtle noise texture via SVG data URI */
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"),
+    linear-gradient(
+      180deg,
+      #2d333b 0%,
+      #22272e 8%,
+      #1c2128 50%,
+      #161b22 100%
+    );
+  background-blend-mode: overlay, normal;
+
+  /* Internal layout */
+  padding: 1.25rem 1.25rem 2rem;
+  box-sizing: border-box;
+}
+
+/* ============================================
+   HEADER - Stamped instrument face
+   ============================================ */
+.calculator-header {
   text-align: center;
+  /* Tighter spacing - integrated feel */
+  padding: 0 0 0.875rem;
+  margin-bottom: 0.875rem;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.calculator-logo {
+  height: 36px;
+  width: auto;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.calculator-title {
+  /* Prominent stamped metal label */
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  /* Brighter steel gray - clearer hierarchy */
+  color: #d0d7de;
+  /* Tighter gap below logo */
+  margin: 0.5rem 0 0 0;
+  /* Engraved effect - crisp shadows */
+  text-shadow:
+    0 1px 0 rgba(110, 118, 129, 0.35),
+    0 -1px 0 rgba(0, 0, 0, 0.6);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+/* Divider line below header - machined groove */
+.calculator-header::after {
+  content: "";
+  display: block;
+  margin-top: 0.75rem;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(48, 54, 61, 0.6) 20%,
+    rgba(48, 54, 61, 0.6) 80%,
+    transparent 100%
+  );
+  box-shadow: 0 1px 0 rgba(45, 51, 59, 0.3);
 }
 
-.card {
-  padding: 2em;
+/* ============================================
+   CONTROLS PANEL - Housing surface (lighter than inputs)
+   ============================================ */
+.calculator-controls {
+  /* Lighter than inputs (#0d1117), passive housing */
+  background: #1c2128;
+  border-radius: 10px;
+  padding: 1.25rem 1rem 1.5rem;
+  /* Subtle border for definition */
+  border: 1px solid rgba(48, 54, 61, 0.5);
+
+  /* Light inset for recessed feel within shell */
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.25),
+    /* Outer lip highlight */
+    0 1px 0 rgba(55, 62, 71, 0.3);
 }
 
-.read-the-docs {
-  color: #888;
+/* Form Layout */
+.form-group {
+  margin-bottom: 1rem;
 }
 
-/* Fee Breakdown Component - Oregon Visual Parity */
+.form-status {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  color: #6e7681;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.form-error {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  color: #f85149;
+  background-color: rgba(248, 81, 73, 0.1);
+  border: 1px solid rgba(248, 81, 73, 0.25);
+  border-radius: 6px;
+  margin-top: 0.5rem;
+}
+
+/* ============================================
+   FEE BREAKDOWN - Display panel
+   ============================================ */
 .fee-breakdown {
-  margin-top: 1.5rem;
+  margin-top: 1.25rem;
   text-align: left;
 }
 
@@ -58,12 +173,16 @@
   animation: fee-reveal 0.2s ease-out;
 }
 
-/* Total Fee Display - Oregon style: flat dark box */
+/* Total Fee Display - LCD-style recess */
 .fee-display {
   padding: 1rem;
-  background-color: #1a1a1a;
-  border: 1px solid #333;
+  background-color: #0d1117;
+  border: none;
+  border-radius: 8px;
   margin-bottom: 0.75rem;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .fee-display-title {
@@ -71,29 +190,33 @@
   font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #777;
+  color: #6e7681;
   margin-bottom: 0.375rem;
 }
 
 .fee-display-main {
   font-size: 2rem;
   font-weight: 400;
-  color: #22c55e;
+  color: #3fb950;
   line-height: 1.2;
 }
 
 .fee-display-info {
   font-size: 0.6875rem;
-  color: #555;
+  color: #484f58;
   margin-top: 0.375rem;
 }
 
-/* Fee Explanation Section - Oregon style: dense table */
+/* Fee Explanation Section - machined recess */
 .fee-explanation {
   padding: 0.875rem 1rem;
-  background-color: #1a1a1a;
-  border: 1px solid #333;
+  background-color: #0d1117;
+  border: none;
+  border-radius: 8px;
   text-align: left;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .fee-explanation-title {
@@ -101,115 +224,164 @@
   font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #555;
+  color: #484f58;
   margin-bottom: 0.625rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid #21262d;
 }
 
-.fee-explanation-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.fee-line-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 0.125rem 0;
-}
-
-.fee-line-label {
-  color: #777;
+/* Fee Table - dense, auditable layout */
+.fee-table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 0.8125rem;
 }
 
-.fee-line-value {
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.85);
+.fee-row td {
+  padding: 0.25rem 0;
+}
+
+.fee-row-label {
+  color: #6e7681;
+  text-align: left;
+}
+
+.fee-row-value {
+  color: #c9d1d9;
   text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-/* LCA Bonus - green to indicate credit */
-.fee-line-bonus .fee-line-value {
-  color: #22c55e;
-}
-
-/* Net Fee in breakdown */
-.fee-line-total {
-  margin-top: 0.25rem;
+/* Subtotal row - Initial Fee after rate × weight */
+.fee-row-subtotal td {
   padding-top: 0.375rem;
-  border-top: 1px solid #333;
+  border-top: 1px solid #21262d;
 }
 
-.fee-line-total .fee-line-label {
-  color: #999;
+/* Credits/Adjustments - green to indicate reduction */
+.fee-row-credit .fee-row-value {
+  color: #3fb950;
 }
 
-.fee-line-total .fee-line-value {
-  color: #fff;
+/* Zero-value adjustments - muted */
+.fee-row-zero .fee-row-value {
+  color: #484f58;
+}
+
+/* Net Fee row - emphasized */
+.fee-row-total td {
+  padding-top: 0.5rem;
+  border-top: 1px solid #21262d;
+}
+
+.fee-row-total .fee-row-label {
+  color: #8b949e;
+}
+
+.fee-row-total .fee-row-value {
+  color: #e6edf3;
   font-weight: 500;
 }
 
 .fee-program-info {
   margin-top: 0.625rem;
   padding-top: 0.5rem;
-  border-top: 1px solid #2a2a2a;
+  border-top: 1px solid #21262d;
   font-size: 0.625rem;
-  color: #555;
+  color: #484f58;
 }
 
-/* Light theme overrides */
-@media (prefers-color-scheme: light) {
-  .fee-display,
-  .fee-explanation {
-    background-color: #f5f5f5;
-    border-color: #ddd;
-  }
+/* ============================================
+   FEE EXPLANATION SECTION
+   ============================================ */
+.fee-explanation-section {
+  margin-top: 1rem;
+  padding: 0.875rem 1rem;
+  background-color: #0d1117;
+  border-radius: 8px;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
 
-  .fee-display-title,
-  .fee-explanation-title {
-    color: #666;
-    border-bottom-color: #e0e0e0;
-  }
+.fee-explanation-section .fee-explanation-title {
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #484f58;
+  margin-bottom: 0.625rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #21262d;
+}
 
-  .fee-display-main {
-    color: #16a34a;
-  }
+.fee-explanation-body {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #8b949e;
+}
 
-  .fee-display-info {
-    color: #888;
-  }
+.fee-explanation-paragraph {
+  margin: 0 0 0.625rem 0;
+}
 
-  .fee-line-label {
-    color: #666;
-  }
+.fee-explanation-paragraph:last-child {
+  margin-bottom: 0;
+}
 
-  .fee-line-value {
-    color: #333;
-  }
+.fee-explanation-final {
+  color: #c9d1d9;
+  font-weight: 500;
+}
 
-  .fee-line-bonus .fee-line-value {
-    color: #16a34a;
-  }
+/* Inline highlight for key variables in explanation text */
+.explanation-highlight {
+  color: #e6edf3;
+  font-weight: 500;
+}
 
-  .fee-line-total {
-    border-top-color: #ddd;
-  }
+/* ============================================
+   DISCLAIMER CARD - Prominent Warning Block
+   ============================================ */
+.disclaimer-card {
+  background: #121821;
+  border-left: 4px solid #f59e0b;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  color: #d1d5db;
+}
 
-  .fee-line-total .fee-line-label {
-    color: #444;
-  }
+.disclaimer-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #fbbf24;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
 
-  .fee-line-total .fee-line-value {
-    color: #111;
-  }
+.disclaimer-card p {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 6px 0;
+}
 
-  .fee-program-info {
-    border-top-color: #e0e0e0;
-    color: #888;
-  }
+.disclaimer-card strong {
+  color: #e6edf3;
+}
+
+/* ============================================
+   ESTIMATOR FOOTER - Legal Reference
+   ============================================ */
+.estimator-footer {
+  margin-top: 12px;
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
+  opacity: 0.8;
 }

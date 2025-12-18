@@ -3,9 +3,9 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
+  /* Dark theme by default - Oregon parity */
+  color-scheme: dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,56 +13,217 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Page background - Oregon blue-dark gradient */
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0d1117 0%, #010409 100%);
+  background-color: #010409;
+  background-attachment: fixed;
+}
+
 a {
   font-weight: 500;
-  color: #646cff;
+  color: #3fb950;
   text-decoration: inherit;
 }
 a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  color: #2ea043;
 }
 
 h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.2;
+  margin: 0 0 1.5rem 0;
+  color: rgba(255, 255, 255, 0.9);
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+/* Form elements - graphite industrial style */
+label {
+  display: block;
+  font-size: 0.75rem;
   font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #6e7681;
+  margin-bottom: 0.375rem;
+}
+
+/* Input fields - dark recessed wells */
+select,
+input[type="text"] {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
   font-family: inherit;
-  background-color: #1a1a1a;
+  /* Bright text - higher contrast than labels */
+  color: #e6edf3;
+  /* Darker than housing - flat, no texture */
+  background-color: #0d1117;
+  /* Visible border for definition */
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  box-sizing: border-box;
+  /* Deep inset shadow - recessed feel */
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Number input - hide native spinners */
+input[type="number"] {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: #e6edf3;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  box-sizing: border-box;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Custom number stepper */
+.number-field {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.number-field .number-input {
+  padding-right: 2rem;
+}
+
+.number-stepper {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Step buttons - fully neutralized, no visual feedback */
+.step-btn {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 0.75rem;
+  font-size: 0.5rem;
+  color: #6e7681;
   cursor: pointer;
-  transition: border-color 0.25s;
+  line-height: 1;
+  /* Fully neutralize - no transitions, no visual changes */
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
+
+/* Neutralize all interactive states - no visual feedback */
+.step-btn:hover,
+.step-btn:focus,
+.step-btn:focus-visible,
+.step-btn:active {
+  color: #6e7681;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236e7681' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2rem;
+}
+
+select:focus,
+input:focus {
+  outline: none;
+  border-color: #3fb950;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3),
+    0 0 0 2px rgba(63, 185, 80, 0.25);
+}
+
+/* Primary button - raised, pressable surface */
+button {
+  /* Slightly more rounded than inputs */
+  border-radius: 8px;
+  /* Dark green border for depth - supports the fill */
+  border: 1px solid #1a7f37;
+  padding: 0.625rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  /* Strong vertical gradient - lighter top, darker bottom */
+  background: linear-gradient(
+    180deg,
+    #3fb950 0%,
+    #2ea043 40%,
+    #238636 100%
+  );
+  color: #fff;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.1s;
+  /* Layered shadow - reduced blur for cleaner edge */
+  box-shadow:
+    0 2px 3px rgba(0, 0, 0, 0.3),
+    0 4px 6px rgba(0, 0, 0, 0.2),
+    /* Inner edge highlight - machined finish */
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
 button:hover {
-  border-color: #646cff;
+  /* Subtle lift on hover */
+  transform: translateY(-1px);
+  box-shadow:
+    0 3px 4px rgba(0, 0, 0, 0.35),
+    0 5px 8px rgba(0, 0, 0, 0.25),
+    /* Inner edge highlight - maintained */
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
+
+button:active {
+  /* Pressed state - no lift, inset shadow */
+  transform: translateY(0);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+  outline: 2px solid #3fb950;
+  outline-offset: 2px;
 }
