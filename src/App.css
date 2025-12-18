@@ -41,108 +41,175 @@
   color: #888;
 }
 
-/* Fee Breakdown Component */
+/* Fee Breakdown Component - Oregon Visual Parity */
 .fee-breakdown {
-  margin-top: 2rem;
-  text-align: center;
+  margin-top: 1.5rem;
+  text-align: left;
 }
 
+/* Subtle reveal animation */
+@keyframes fee-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fee-breakdown--has-result .fee-display,
+.fee-breakdown--has-result .fee-explanation {
+  animation: fee-reveal 0.2s ease-out;
+}
+
+/* Total Fee Display - Oregon style: flat dark box */
 .fee-display {
-  padding: 1.5rem;
-  border-radius: 8px;
+  padding: 1rem;
   background-color: #1a1a1a;
-  margin-bottom: 1rem;
+  border: 1px solid #333;
+  margin-bottom: 0.75rem;
 }
 
 .fee-display-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  color: #888;
-  margin-bottom: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #777;
+  margin-bottom: 0.375rem;
 }
 
 .fee-display-main {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #4ade80;
+  font-size: 2rem;
+  font-weight: 400;
+  color: #22c55e;
+  line-height: 1.2;
 }
 
 .fee-display-info {
-  font-size: 0.875rem;
-  color: #888;
-  margin-top: 0.5rem;
+  font-size: 0.6875rem;
+  color: #555;
+  margin-top: 0.375rem;
 }
 
+/* Fee Explanation Section - Oregon style: dense table */
 .fee-explanation {
-  padding: 1.5rem;
-  border-radius: 8px;
+  padding: 0.875rem 1rem;
   background-color: #1a1a1a;
+  border: 1px solid #333;
   text-align: left;
 }
 
 .fee-explanation-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  color: #888;
-  margin-bottom: 1rem;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #555;
+  margin-bottom: 0.625rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #2a2a2a;
 }
 
 .fee-explanation-content {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.375rem;
 }
 
 .fee-line-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: baseline;
+  padding: 0.125rem 0;
 }
 
 .fee-line-label {
-  color: rgba(255, 255, 255, 0.87);
+  color: #777;
+  font-size: 0.8125rem;
 }
 
 .fee-line-value {
-  font-weight: 500;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: right;
 }
 
+/* LCA Bonus - green to indicate credit */
 .fee-line-bonus .fee-line-value {
-  color: #4ade80;
+  color: #22c55e;
 }
 
+/* Net Fee in breakdown */
 .fee-line-total {
-  padding-top: 0.75rem;
+  margin-top: 0.25rem;
+  padding-top: 0.375rem;
   border-top: 1px solid #333;
-  font-weight: 600;
+}
+
+.fee-line-total .fee-line-label {
+  color: #999;
+}
+
+.fee-line-total .fee-line-value {
+  color: #fff;
+  font-weight: 500;
 }
 
 .fee-program-info {
-  margin-top: 1rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #333;
-  font-size: 0.75rem;
-  color: #888;
+  margin-top: 0.625rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #2a2a2a;
+  font-size: 0.625rem;
+  color: #555;
 }
 
+/* Light theme overrides */
 @media (prefers-color-scheme: light) {
   .fee-display,
   .fee-explanation {
     background-color: #f5f5f5;
+    border-color: #ddd;
+  }
+
+  .fee-display-title,
+  .fee-explanation-title {
+    color: #666;
+    border-bottom-color: #e0e0e0;
+  }
+
+  .fee-display-main {
+    color: #16a34a;
+  }
+
+  .fee-display-info {
+    color: #888;
+  }
+
+  .fee-line-label {
+    color: #666;
+  }
+
+  .fee-line-value {
+    color: #333;
+  }
+
+  .fee-line-bonus .fee-line-value {
+    color: #16a34a;
   }
 
   .fee-line-total {
     border-top-color: #ddd;
   }
 
-  .fee-program-info {
-    border-top-color: #ddd;
+  .fee-line-total .fee-line-label {
+    color: #444;
   }
 
-  .fee-line-label {
-    color: #213547;
+  .fee-line-total .fee-line-value {
+    color: #111;
+  }
+
+  .fee-program-info {
+    border-top-color: #e0e0e0;
+    color: #888;
   }
 }

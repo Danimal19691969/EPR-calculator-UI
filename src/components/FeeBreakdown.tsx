@@ -25,9 +25,16 @@ export default function FeeBreakdown({
   result,
   showExplanation = true,
 }: FeeBreakdownProps) {
+  const hasResult = result !== null;
+  const hasLCABonus = hasResult && result.lca_bonus.type !== "none" && result.lca_bonus.amount !== 0;
+
+  const breakdownClass = hasResult
+    ? "fee-breakdown fee-breakdown--has-result"
+    : "fee-breakdown";
+
   if (!result) {
     return (
-      <div className="fee-breakdown">
+      <div className={breakdownClass}>
         <div className="fee-display">
           <div className="fee-display-title">TOTAL EPR FEE</div>
           <div className="fee-display-main">$0.00</div>
@@ -37,10 +44,8 @@ export default function FeeBreakdown({
     );
   }
 
-  const hasLCABonus = result.lca_bonus.type !== "none" && result.lca_bonus.amount !== 0;
-
   return (
-    <div className="fee-breakdown">
+    <div className={breakdownClass}>
       <div className="fee-display">
         <div className="fee-display-title">TOTAL EPR FEE</div>
         <div className="fee-display-main">{formatCurrency(result.total_fee)}</div>
@@ -51,10 +56,10 @@ export default function FeeBreakdown({
 
       {showExplanation && (
         <div className="fee-explanation">
-          <div className="fee-explanation-title">FEE BREAKDOWN</div>
+          <div className="fee-explanation-title">EXPLANATION OF FEE</div>
           <div className="fee-explanation-content">
             <div className="fee-line-item">
-              <span className="fee-line-label">Base Fee</span>
+              <span className="fee-line-label">Initial Fee</span>
               <span className="fee-line-value">{formatCurrency(result.initial_fee)}</span>
             </div>
 
@@ -68,7 +73,7 @@ export default function FeeBreakdown({
             )}
 
             <div className="fee-line-item fee-line-total">
-              <span className="fee-line-label">Total Fee</span>
+              <span className="fee-line-label">Net Fee</span>
               <span className="fee-line-value">{formatCurrency(result.total_fee)}</span>
             </div>
           </div>
