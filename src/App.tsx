@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { calculateEPR, fetchMaterials } from "./services/api";
-import type { Material, CalculateResponse } from "./services/api";
+import type { Material, CalculateResponse, LCASelectionType } from "./services/api";
 import { getStateRules } from "./config/stateRules";
 import { getProgramRules } from "./config/programRules";
 import type { LCAOptionType } from "./config/programRules";
@@ -8,12 +8,16 @@ import FeeBreakdown from "./components/FeeBreakdown";
 import FeeExplanation from "./components/FeeExplanation";
 import Disclaimer from "./components/Disclaimer";
 import Footer from "./components/Footer";
+import LcaSelector from "./components/LcaSelector";
 import "./App.css";
 
 export default function App() {
   const [state, setState] = useState("Colorado");
   const [materials, setMaterials] = useState<Material[]>([]);
   const [materialCode, setMaterialCode] = useState("");
+  // Sub-category selection - only used when state supports subcategories
+  // and the selected material defines subcategories
+  const [subcategoryId, setSubcategoryId] = useState<string | null>(null);
   // Weight is stored as a numeric value. Unit is always LBS for now.
   // Metric support intentionally deferred.
   // Future: Add weightUnit state, use toLbs() before API call.
@@ -31,6 +35,19 @@ export default function App() {
   const programRules = getProgramRules(state);
   const selectedMaterial = materials.find((m) => m.material_code === materialCode);
 
+  // Subcategory selector should only appear when:
+  // 1. State supports subcategories
+  // 2. Selected material has subcategories defined
+  const showSubcategorySelector =
+    stateRules.supportsSubcategories &&
+    selectedMaterial?.subcategories &&
+    selectedMaterial.subcategories.length > 0;
+
+  // Get selected subcategory for display in explanation
+  const selectedSubcategory = selectedMaterial?.subcategories?.find(
+    (sub) => sub.subcategory_id === subcategoryId
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -39,7 +56,10 @@ export default function App() {
       setMaterialsError(null);
       setMaterialCode("");
       setMaterials([]);
+      setSubcategoryId(null); // Reset subcategory when state changes
       setLcaSelection("none"); // Reset LCA selection when state changes
+      setResult(null); // Clear previous calculation result
+      setError(null); // Clear any validation errors
 
       try {
         const data = await fetchMaterials(state);
@@ -67,10 +87,25 @@ export default function App() {
     };
   }, [state]);
 
+  // Map UI LCA option type to API LCA selection type (camelCase → snake_case)
+  function toLCASelectionType(option: LCAOptionType): LCASelectionType {
+    const mapping: Record<LCAOptionType, LCASelectionType> = {
+      none: "none",
+      bonusA: "bonus_a",
+      bonusB: "bonus_b",
+    };
+    return mapping[option];
+  }
+
   async function handleCalculate() {
     setError(null);
     if (!materialCode) {
       setError("Please select a material");
+      return;
+    }
+    // Validate subcategory selection for materials that require it
+    if (showSubcategorySelector && !subcategoryId) {
+      setError("Please select a sub-category for this material");
       return;
     }
     try {
@@ -80,6 +115,13 @@ export default function App() {
         state,
         material: materialCode,
         weight_lbs: weight,
+        // Oregon-specific fields - only included when state supports them
+        ...(stateRules.supportsSubcategories && subcategoryId
+          ? { subcategory_id: subcategoryId }
+          : {}),
+        ...(stateRules.supportsLCA
+          ? { lca_selection: toLCASelectionType(lcaSelection) }
+          : {}),
       });
 
       setResult(res);
@@ -126,7 +168,10 @@ export default function App() {
             <select
               id="material-select"
               value={materialCode}
-              onChange={(e) => setMaterialCode(e.target.value)}
+              onChange={(e) => {
+                setMaterialCode(e.target.value);
+                setSubcategoryId(null); // Reset subcategory when material changes
+              }}
             >
               {materials.map((m) => (
                 <option key={m.material_code} value={m.material_code}>
@@ -136,6 +181,25 @@ export default function App() {
             </select>
           )}
         </div>
+
+        {/* Sub-category selector - only shown when state supports subcategories AND material has subcategories */}
+        {showSubcategorySelector && selectedMaterial?.subcategories && (
+          <div className="form-group">
+            <label htmlFor="subcategory-select">Sub-Category</label>
+            <select
+              id="subcategory-select"
+              value={subcategoryId ?? ""}
+              onChange={(e) => setSubcategoryId(e.target.value || null)}
+            >
+              <option value="">Select a sub-category</option>
+              {selectedMaterial.subcategories.map((sub) => (
+                <option key={sub.subcategory_id} value={sub.subcategory_id}>
+                  {sub.subcategory_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="form-group">
           <label htmlFor="weight-input">Weight (lbs)</label>
@@ -172,18 +236,11 @@ export default function App() {
 
         {/* LCA Selection - only shown for states that support it */}
         {stateRules.supportsLCA && programRules.lcaOptions && (
-          <div className="form-group">
-            <label htmlFor="lca-select">LCA Status</label>
-            <select
-              id="lca-select"
-              value={lcaSelection}
-              onChange={(e) => setLcaSelection(e.target.value as LCAOptionType)}
-            >
-              <option value="none">{programRules.lcaOptions.none.label}</option>
-              <option value="bonusA">{programRules.lcaOptions.bonusA.label}</option>
-              <option value="bonusB">{programRules.lcaOptions.bonusB.label}</option>
-            </select>
-          </div>
+          <LcaSelector
+            value={lcaSelection}
+            onChange={setLcaSelection}
+            lcaOptions={programRules.lcaOptions}
+          />
         )}
 
         <button onClick={handleCalculate}>Estimate</button>
@@ -200,6 +257,7 @@ export default function App() {
           <FeeExplanation
             state={state}
             materialLabel={selectedMaterial.material_name}
+            subcategoryLabel={selectedSubcategory?.subcategory_name}
             weightLbs={result.weight_lbs}
             baseRate={selectedMaterial.net_effective_rate_lbs}
             initialFee={result.initial_fee}

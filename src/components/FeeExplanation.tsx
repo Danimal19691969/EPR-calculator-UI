@@ -5,6 +5,8 @@ import { ExplanationHighlight } from "./ExplanationHighlight";
 interface FeeExplanationProps {
   state: string;
   materialLabel: string;
+  /** Optional sub-category label for states that support subcategories */
+  subcategoryLabel?: string | null;
   weightLbs: number;
   baseRate: number;
   initialFee: number;
@@ -110,6 +112,7 @@ function renderOregonLCAExplanation(
 export default function FeeExplanation({
   state,
   materialLabel,
+  subcategoryLabel,
   weightLbs,
   baseRate,
   initialFee,
@@ -121,10 +124,22 @@ export default function FeeExplanation({
 }: FeeExplanationProps) {
   const supportsLCA = stateRules.supportsLCA && programRules.supportsLCA;
 
+  // Format material description with optional subcategory
+  const materialDescription = subcategoryLabel ? (
+    <>
+      <ExplanationHighlight>{materialLabel}</ExplanationHighlight>
+      {" ("}
+      <ExplanationHighlight>{subcategoryLabel}</ExplanationHighlight>
+      {")"}
+    </>
+  ) : (
+    <ExplanationHighlight>{materialLabel}</ExplanationHighlight>
+  );
+
   // Opening paragraph: always show base calculation
   const openingParagraph = supportsLCA ? (
     <p className="fee-explanation-paragraph">
-      Your <ExplanationHighlight>{materialLabel}</ExplanationHighlight> packaging
+      Your {materialDescription} packaging
       weighing <ExplanationHighlight>{weightLbs} pounds</ExplanationHighlight> in {state}{" "}
       starts with an average fee rate of{" "}
       <ExplanationHighlight>{formatRate(baseRate)}/pound</ExplanationHighlight>,
@@ -133,7 +148,7 @@ export default function FeeExplanation({
     </p>
   ) : (
     <p className="fee-explanation-paragraph">
-      Your <ExplanationHighlight>{materialLabel}</ExplanationHighlight> packaging
+      Your {materialDescription} packaging
       weighing <ExplanationHighlight>{weightLbs} pounds</ExplanationHighlight> in {state} is
       subject to a fee rate of{" "}
       <ExplanationHighlight>{formatRate(baseRate)} per pound</ExplanationHighlight>. At{" "}

@@ -23,6 +23,9 @@ export interface StateRules {
   /** State supports LCA (Life Cycle Assessment) bonus/adjustment display */
   supportsLCA: boolean;
 
+  /** State supports material sub-categories for granular classification */
+  supportsSubcategories: boolean;
+
   // Future fee modifiers can be added here:
   // supportsRecyclingCredit?: boolean;
   // supportsEcoModulation?: boolean;
@@ -39,9 +42,11 @@ export interface StateRules {
 const STATE_RULES: Record<string, StateRules> = {
   Colorado: {
     supportsLCA: false,
+    supportsSubcategories: false,
   },
   Oregon: {
     supportsLCA: true,
+    supportsSubcategories: true,
   },
 };
 
@@ -51,6 +56,7 @@ const STATE_RULES: Record<string, StateRules> = {
  */
 const DEFAULT_RULES: StateRules = {
   supportsLCA: false,
+  supportsSubcategories: false,
 };
 
 /**

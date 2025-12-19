@@ -4,6 +4,17 @@ if (!API_BASE_URL) {
   throw new Error("VITE_API_BASE_URL is not defined");
 }
 
+/**
+ * Sub-category for materials that have granular classifications.
+ * Only used for states that support sub-categories (e.g., Oregon).
+ */
+export interface MaterialSubcategory {
+  subcategory_id: string;
+  subcategory_name: string;
+  /** Rate modifier - may override or adjust the base material rate */
+  rate_modifier?: number;
+}
+
 export interface Material {
   material_code: string;
   material_name: string;
@@ -12,7 +23,15 @@ export interface Material {
   covered: boolean;
   recyclable: boolean;
   compostable: boolean;
+  /** Optional sub-categories for granular material classification */
+  subcategories?: MaterialSubcategory[];
 }
+
+/**
+ * LCA selection types for API requests.
+ * Uses snake_case to match API convention (matches lca_bonus response type).
+ */
+export type LCASelectionType = "none" | "bonus_a" | "bonus_b";
 
 /**
  * API request payload for EPR fee calculation.
@@ -28,6 +47,10 @@ export interface CalculateRequest {
   material: string;
   /** Weight in pounds - the authoritative unit for all calculations */
   weight_lbs: number;
+  /** Sub-category ID - only for states that support subcategories (e.g., Oregon) */
+  subcategory_id?: string;
+  /** LCA selection - only for states that support LCA (e.g., Oregon) */
+  lca_selection?: LCASelectionType;
 }
 
 

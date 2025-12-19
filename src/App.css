@@ -385,3 +385,68 @@
   text-align: center;
   opacity: 0.8;
 }
+
+/* ============================================
+   LCA SELECTOR - Radio Button Group
+   ============================================ */
+.lca-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lca-radio-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.lca-radio-option:hover {
+  border-color: #484f58;
+  background-color: #161b22;
+}
+
+.lca-radio-option:has(input:checked) {
+  border-color: #3fb950;
+  background-color: rgba(63, 185, 80, 0.1);
+}
+
+.lca-radio-option input[type="radio"] {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #484f58;
+  border-radius: 50%;
+  background-color: #0d1117;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.lca-radio-option input[type="radio"]:checked {
+  border-color: #3fb950;
+  background-color: #0d1117;
+}
+
+.lca-radio-option input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background-color: #3fb950;
+  border-radius: 50%;
+}
+
+.lca-radio-label {
+  font-size: 0.8125rem;
+  color: #c9d1d9;
+}
