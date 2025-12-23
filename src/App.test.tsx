@@ -1,0 +1,257 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import App from './App';
+
+// Mock the API module
+vi.mock('./services/api', () => ({
+  fetchMaterials: vi.fn(),
+  fetchOregonGroupedMaterials: vi.fn(),
+  calculateEPR: vi.fn(),
+}));
+
+// Import mocked functions for assertions
+import { fetchMaterials, fetchOregonGroupedMaterials, calculateEPR } from './services/api';
+
+const mockOregonCategories = {
+  state: 'Oregon',
+  categories: [
+    {
+      category_id: 'glass_and_ceramics',
+      category_name: 'Glass and Ceramics',
+      subcategories: [
+        { id: 'ceramic_all_forms', display_name: 'Ceramic (all forms)', rate: 0.05 },
+        { id: 'glass_clear', display_name: 'Glass (clear)', rate: 0.03 },
+      ],
+    },
+    {
+      category_id: 'paper',
+      category_name: 'Paper',
+      subcategories: [
+        { id: 'paper_cardboard', display_name: 'Cardboard', rate: 0.02 },
+      ],
+    },
+  ],
+};
+
+const mockColoradoMaterials = [
+  { material_code: 'HDPE', material_name: 'HDPE Plastic', material_class: 'Plastic', net_effective_rate_lbs: 0.04, covered: true, recyclable: true, compostable: false },
+  { material_code: 'PET', material_name: 'PET Plastic', material_class: 'Plastic', net_effective_rate_lbs: 0.03, covered: true, recyclable: true, compostable: false },
+];
+
+const mockCalculateResponse = {
+  state: 'oregon',
+  weight_lbs: 100,
+  initial_fee: 5.00,
+  lca_bonus: { type: 'none', amount: 0 },
+  total_fee: 5.00,
+  status: 'active',
+  program_start: '2025-07-01',
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+
+  // Default: Colorado materials load
+  (fetchMaterials as any).mockResolvedValue(mockColoradoMaterials);
+  (fetchOregonGroupedMaterials as any).mockResolvedValue(mockOregonCategories);
+  (calculateEPR as any).mockResolvedValue(mockCalculateResponse);
+});
+
+describe('Oregon subcategory selection flow', () => {
+  it('should NOT show validation error when valid subcategory is selected', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Wait for initial Colorado materials to load
+    await waitFor(() => {
+      expect(screen.getByLabelText(/state/i)).toBeInTheDocument();
+    });
+
+    // Switch to Oregon
+    await user.selectOptions(screen.getByLabelText(/state/i), 'Oregon');
+
+    // Wait for Oregon categories to load
+    await waitFor(() => {
+      expect(screen.getByLabelText(/select category/i)).toBeInTheDocument();
+    });
+
+    // Select a category
+    await user.selectOptions(screen.getByLabelText(/select category/i), 'glass_and_ceramics');
+
+    // Wait for subcategory dropdown to appear
+    await waitFor(() => {
+      expect(screen.getByLabelText(/select subcategory/i)).toBeInTheDocument();
+    });
+
+    // Select a subcategory
+    await user.selectOptions(screen.getByLabelText(/select subcategory/i), 'ceramic_all_forms');
+
+    // Click Estimate
+    await user.click(screen.getByRole('button', { name: /estimate/i }));
+
+    // CRITICAL ASSERTION: No validation error should appear
+    expect(screen.queryByText(/please select a subcategory/i)).not.toBeInTheDocument();
+
+    // calculateEPR should have been called
+    expect(calculateEPR).toHaveBeenCalledTimes(1);
+
+    // Verify the payload has correct fields
+    expect(calculateEPR).toHaveBeenCalledWith(
+      expect.objectContaining({
+        state: 'Oregon',
+        material_category: 'glass_and_ceramics',
+        sub_category: 'ceramic_all_forms',
+        weight_lbs: expect.any(Number),
+      })
+    );
+  });
+
+  it('should show validation error when subcategory is NOT selected', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Wait for initial load
+    await waitFor(() => {
+      expect(screen.getByLabelText(/state/i)).toBeInTheDocument();
+    });
+
+    // Switch to Oregon
+    await user.selectOptions(screen.getByLabelText(/state/i), 'Oregon');
+
+    // Wait for Oregon categories to load
+    await waitFor(() => {
+      expect(screen.getByLabelText(/select category/i)).toBeInTheDocument();
+    });
+
+    // Select a category (but NOT a subcategory)
+    await user.selectOptions(screen.getByLabelText(/select category/i), 'glass_and_ceramics');
+
+    // Wait for subcategory dropdown to appear
+    await waitFor(() => {
+      expect(screen.getByLabelText(/select subcategory/i)).toBeInTheDocument();
+    });
+
+    // Do NOT select a subcategory - leave it at default "Select a subcategory"
+
+    // Click Estimate
+    await user.click(screen.getByRole('button', { name: /estimate/i }));
+
+    // Validation error SHOULD appear
+    await waitFor(() => {
+      expect(screen.getByText(/please select a subcategory/i)).toBeInTheDocument();
+    });
+
+    // calculateEPR should NOT have been called
+    expect(calculateEPR).not.toHaveBeenCalled();
+  });
+
+  it('should show validation error when category is NOT selected', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Wait for initial load
+    await waitFor(() => {
+      expect(screen.getByLabelText(/state/i)).toBeInTheDocument();
+    });
+
+    // Switch to Oregon
+    await user.selectOptions(screen.getByLabelText(/state/i), 'Oregon');
+
+    // Wait for Oregon categories to load
+    await waitFor(() => {
+      expect(screen.getByLabelText(/select category/i)).toBeInTheDocument();
+    });
+
+    // Do NOT select a category - leave it at default
+
+    // Click Estimate
+    await user.click(screen.getByRole('button', { name: /estimate/i }));
+
+    // Validation error for category SHOULD appear
+    await waitFor(() => {
+      expect(screen.getByText(/please select a category/i)).toBeInTheDocument();
+    });
+
+    // calculateEPR should NOT have been called
+    expect(calculateEPR).not.toHaveBeenCalled();
+  });
+
+  it('should reset subcategory when category changes', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Wait for initial load
+    await waitFor(() => {
+      expect(screen.getByLabelText(/state/i)).toBeInTheDocument();
+    });
+
+    // Switch to Oregon
+    await user.selectOptions(screen.getByLabelText(/state/i), 'Oregon');
+
+    // Wait for Oregon categories to load
+    await waitFor(() => {
+      expect(screen.getByLabelText(/select category/i)).toBeInTheDocument();
+    });
+
+    // Select a category
+    await user.selectOptions(screen.getByLabelText(/select category/i), 'glass_and_ceramics');
+
+    // Wait for subcategory dropdown and select one
+    await waitFor(() => {
+      expect(screen.getByLabelText(/select subcategory/i)).toBeInTheDocument();
+    });
+    await user.selectOptions(screen.getByLabelText(/select subcategory/i), 'ceramic_all_forms');
+
+    // Verify subcategory is selected
+    expect((screen.getByLabelText(/select subcategory/i) as HTMLSelectElement).value).toBe('ceramic_all_forms');
+
+    // Now change the category
+    await user.selectOptions(screen.getByLabelText(/select category/i), 'paper');
+
+    // Wait for new subcategory dropdown
+    await waitFor(() => {
+      expect(screen.getByLabelText(/select subcategory/i)).toBeInTheDocument();
+    });
+
+    // Subcategory should be reset to empty
+    expect((screen.getByLabelText(/select subcategory/i) as HTMLSelectElement).value).toBe('');
+  });
+});
+
+describe('Colorado material selection flow', () => {
+  it('should work correctly with Colorado material selection', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Wait for Colorado materials to load (default state)
+    await waitFor(() => {
+      expect(screen.getByLabelText(/select material type/i)).toBeInTheDocument();
+    });
+
+    // Select a material
+    await user.selectOptions(screen.getByLabelText(/select material type/i), 'HDPE');
+
+    // Click Estimate
+    await user.click(screen.getByRole('button', { name: /estimate/i }));
+
+    // calculateEPR should have been called with Colorado payload
+    await waitFor(() => {
+      expect(calculateEPR).toHaveBeenCalledWith(
+        expect.objectContaining({
+          state: 'Colorado',
+          material: 'HDPE',
+          weight_lbs: expect.any(Number),
+        })
+      );
+    });
+
+    // Should NOT have Oregon fields
+    expect(calculateEPR).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        material_category: expect.anything(),
+        sub_category: expect.anything(),
+      })
+    );
+  });
+});

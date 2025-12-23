@@ -3,7 +3,6 @@ import { calculateEPR, fetchMaterials, fetchOregonGroupedMaterials } from "./ser
 import type {
   Material,
   CalculateResponse,
-  LCASelectionType,
   OregonCategory,
 } from "./services/api";
 import { getStateRules } from "./config/stateRules";
@@ -121,8 +120,8 @@ export default function App() {
   }, [state]);
 
   // Map UI LCA option type to API LCA selection type (camelCase → snake_case)
-  function toLCASelectionType(option: LCAOptionType): LCASelectionType {
-    const mapping: Record<LCAOptionType, LCASelectionType> = {
+  function toLCASelectionType(option: LCAOptionType): string {
+    const mapping: Record<LCAOptionType, string> = {
       none: "none",
       bonusA: "bonus_a",
       bonusB: "bonus_b",
@@ -158,22 +157,24 @@ export default function App() {
 
     try {
       // API expects weight in pounds. Currently weight is always in LBS.
-      // Future: If user selects KG, convert here: toLbs(createWeight(weight, weightUnit))
-      const res = await calculateEPR({
-        state,
-        // Oregon uses subcategory_id as the material identifier
-        material: isOregon ? (selectedSubcategoryId ?? "") : materialCode,
-        weight_lbs: weight,
-        // Oregon-specific fields - only included when state supports them
-        ...(isOregon && selectedSubcategoryId
-          ? { subcategory_id: selectedSubcategoryId }
-          : stateRules.supportsSubcategories && subcategoryId
-            ? { subcategory_id: subcategoryId }
-            : {}),
-        ...(stateRules.supportsLCA
-          ? { lca_selection: toLCASelectionType(lcaSelection) }
-          : {}),
-      });
+      // Build payload based on state - Oregon and Colorado have different field requirements
+      const res = await calculateEPR(
+        isOregon
+          ? {
+              // Oregon: uses material_category + sub_category
+              state,
+              material_category: selectedCategoryId!,
+              sub_category: selectedSubcategoryId!,
+              weight_lbs: weight,
+              lca_bonus: toLCASelectionType(lcaSelection),
+            }
+          : {
+              // Colorado: uses flat material code
+              state,
+              material: materialCode,
+              weight_lbs: weight,
+            }
+      );
 
       setResult(res);
     } catch (err: any) {

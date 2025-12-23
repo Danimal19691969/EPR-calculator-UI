@@ -57,21 +57,23 @@ export type LCASelectionType = "none" | "bonus_a" | "bonus_b";
 /**
  * API request payload for EPR fee calculation.
  *
- * NOTE: The API always expects weight in pounds (weight_lbs).
- * Metric support intentionally deferred.
- * When adding KG input, convert to LBS before calling this API:
- *   import { toLbs, createWeight } from '../utils/weight';
- *   weight_lbs: toLbs(createWeight(userValue, userUnit))
+ * NOTE: The API expects different fields for different states:
+ * - Oregon: material_category + sub_category
+ * - Colorado: material
+ *
+ * This interface represents the INPUT from App.tsx.
+ * The calculateEPR function transforms it to the correct backend format.
  */
 export interface CalculateRequest {
   state: string;
-  material: string;
-  /** Weight in pounds - the authoritative unit for all calculations */
   weight_lbs: number;
-  /** Sub-category ID - only for states that support subcategories (e.g., Oregon) */
-  subcategory_id?: string;
-  /** LCA selection - only for states that support LCA (e.g., Oregon) */
-  lca_selection?: LCASelectionType;
+  // Oregon-specific fields
+  material_category?: string;
+  sub_category?: string;
+  lca_bonus?: string;
+  lca_tier?: string;
+  // Colorado-specific fields
+  material?: string;
 }
 
 
@@ -119,13 +121,62 @@ export async function fetchOregonGroupedMaterials(): Promise<OregonGroupedMateri
   return res.json();
 }
 
+/**
+ * Build the correct API payload based on state.
+ * Oregon and Colorado have different required fields.
+ */
+function buildCalculatePayload(input: CalculateRequest): Record<string, unknown> {
+  const { state, weight_lbs } = input;
+
+  if (state.toLowerCase() === "oregon") {
+    // HARD GUARD: Oregon requires material_category and sub_category
+    if (!input.material_category) {
+      throw new Error("Oregon requires material_category");
+    }
+    if (!input.sub_category) {
+      throw new Error("Oregon requires sub_category");
+    }
+
+    // Oregon payload - NEVER include 'material'
+    const payload: Record<string, unknown> = {
+      state: state.toLowerCase(),
+      material_category: input.material_category,
+      sub_category: input.sub_category,
+      weight_lbs,
+    };
+
+    if (input.lca_bonus && input.lca_bonus !== "none") {
+      payload.lca_bonus = input.lca_bonus;
+    }
+    if (input.lca_tier) {
+      payload.lca_tier = input.lca_tier;
+    }
+
+    return payload;
+  }
+
+  // Colorado/default payload - uses 'material'
+  if (!input.material) {
+    throw new Error("Colorado requires material");
+  }
+
+  return {
+    state: state.toLowerCase(),
+    material: input.material,
+    weight_lbs,
+  };
+}
+
 export async function calculateEPR(
   payload: CalculateRequest
 ): Promise<CalculateResponse> {
+  // Transform input to correct backend format
+  const apiPayload = buildCalculatePayload(payload);
+
   const res = await fetch(`${API_BASE_URL}/calculate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(apiPayload),
   });
 
   if (!res.ok) {
