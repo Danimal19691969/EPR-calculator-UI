@@ -28,6 +28,27 @@ export interface Material {
 }
 
 /**
+ * Oregon grouped materials response structure.
+ * Oregon uses a category → subcategory hierarchy instead of a flat list.
+ */
+export interface OregonSubcategory {
+  id: string;
+  display_name: string;
+  rate: number;
+}
+
+export interface OregonCategory {
+  category_id: string;
+  category_name: string;
+  subcategories: OregonSubcategory[];
+}
+
+export interface OregonGroupedMaterialsResponse {
+  state: string;
+  categories: OregonCategory[];
+}
+
+/**
  * LCA selection types for API requests.
  * Uses snake_case to match API convention (matches lca_bonus response type).
  */
@@ -78,6 +99,21 @@ export async function fetchMaterials(state: string): Promise<Material[]> {
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Failed to fetch materials: ${text}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Fetch Oregon's grouped materials (category → subcategory hierarchy).
+ * Oregon uses a different endpoint and response structure than other states.
+ */
+export async function fetchOregonGroupedMaterials(): Promise<OregonGroupedMaterialsResponse> {
+  const res = await fetch(`${API_BASE_URL}/materials/oregon/grouped`);
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to fetch Oregon materials: ${text}`);
   }
 
   return res.json();

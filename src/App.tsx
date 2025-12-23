@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
-import { calculateEPR, fetchMaterials } from "./services/api";
-import type { Material, CalculateResponse, LCASelectionType } from "./services/api";
+import { calculateEPR, fetchMaterials, fetchOregonGroupedMaterials } from "./services/api";
+import type {
+  Material,
+  CalculateResponse,
+  LCASelectionType,
+  OregonCategory,
+} from "./services/api";
 import { getStateRules } from "./config/stateRules";
 import { getProgramRules } from "./config/programRules";
 import type { LCAOptionType } from "./config/programRules";
@@ -13,10 +18,14 @@ import "./App.css";
 
 export default function App() {
   const [state, setState] = useState("Colorado");
+  // Colorado: flat material list
   const [materials, setMaterials] = useState<Material[]>([]);
   const [materialCode, setMaterialCode] = useState("");
-  // Sub-category selection - only used when state supports subcategories
-  // and the selected material defines subcategories
+  // Oregon: grouped categories → subcategories
+  const [oregonCategories, setOregonCategories] = useState<OregonCategory[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
+  // Legacy subcategory (for flat materials with subcategories - not used for Oregon grouped)
   const [subcategoryId, setSubcategoryId] = useState<string | null>(null);
   // Weight is stored as a numeric value. Unit is always LBS for now.
   // Metric support intentionally deferred.
@@ -33,17 +42,28 @@ export default function App() {
   // Derived values
   const stateRules = getStateRules(state);
   const programRules = getProgramRules(state);
+  const isOregon = state === "Oregon";
+
+  // Colorado: flat material list
   const selectedMaterial = materials.find((m) => m.material_code === materialCode);
+
+  // Oregon: category → subcategory hierarchy
+  const selectedCategory = oregonCategories.find((c) => c.category_id === selectedCategoryId);
+  const selectedOregonSubcategory = selectedCategory?.subcategories.find(
+    (s) => s.id === selectedSubcategoryId
+  );
 
   // Subcategory selector should only appear when:
   // 1. State supports subcategories
   // 2. Selected material has subcategories defined
+  // (This is for flat materials with embedded subcategories, NOT Oregon grouped)
   const showSubcategorySelector =
+    !isOregon &&
     stateRules.supportsSubcategories &&
     selectedMaterial?.subcategories &&
     selectedMaterial.subcategories.length > 0;
 
-  // Get selected subcategory for display in explanation
+  // Get selected subcategory for display in explanation (flat materials only)
   const selectedSubcategory = selectedMaterial?.subcategories?.find(
     (sub) => sub.subcategory_id === subcategoryId
   );
@@ -54,19 +74,32 @@ export default function App() {
     async function loadMaterials() {
       setMaterialsLoading(true);
       setMaterialsError(null);
+      // Reset all selection state
       setMaterialCode("");
       setMaterials([]);
-      setSubcategoryId(null); // Reset subcategory when state changes
-      setLcaSelection("none"); // Reset LCA selection when state changes
-      setResult(null); // Clear previous calculation result
-      setError(null); // Clear any validation errors
+      setOregonCategories([]);
+      setSelectedCategoryId(null);
+      setSelectedSubcategoryId(null);
+      setSubcategoryId(null);
+      setLcaSelection("none");
+      setResult(null);
+      setError(null);
 
       try {
-        const data = await fetchMaterials(state);
-        if (!cancelled) {
-          setMaterials(data);
-          if (data.length > 0) {
-            setMaterialCode(data[0].material_code);
+        if (state === "Oregon") {
+          // Oregon uses grouped endpoint
+          const data = await fetchOregonGroupedMaterials();
+          if (!cancelled) {
+            setOregonCategories(data.categories);
+          }
+        } else {
+          // Other states use flat material list
+          const data = await fetchMaterials(state);
+          if (!cancelled) {
+            setMaterials(data);
+            if (data.length > 0) {
+              setMaterialCode(data[0].material_code);
+            }
           }
         }
       } catch (err: any) {
@@ -99,26 +132,44 @@ export default function App() {
 
   async function handleCalculate() {
     setError(null);
-    if (!materialCode) {
-      setError("Please select a material");
-      return;
+
+    // Oregon validation: require category + subcategory
+    if (isOregon) {
+      if (!selectedCategoryId) {
+        setError("Please select a category");
+        return;
+      }
+      if (!selectedSubcategoryId) {
+        setError("Please select a subcategory");
+        return;
+      }
+    } else {
+      // Colorado/other states: require material
+      if (!materialCode) {
+        setError("Please select a material");
+        return;
+      }
+      // Validate subcategory selection for materials that require it
+      if (showSubcategorySelector && !subcategoryId) {
+        setError("Please select a sub-category for this material");
+        return;
+      }
     }
-    // Validate subcategory selection for materials that require it
-    if (showSubcategorySelector && !subcategoryId) {
-      setError("Please select a sub-category for this material");
-      return;
-    }
+
     try {
       // API expects weight in pounds. Currently weight is always in LBS.
       // Future: If user selects KG, convert here: toLbs(createWeight(weight, weightUnit))
       const res = await calculateEPR({
         state,
-        material: materialCode,
+        // Oregon uses subcategory_id as the material identifier
+        material: isOregon ? (selectedSubcategoryId ?? "") : materialCode,
         weight_lbs: weight,
         // Oregon-specific fields - only included when state supports them
-        ...(stateRules.supportsSubcategories && subcategoryId
-          ? { subcategory_id: subcategoryId }
-          : {}),
+        ...(isOregon && selectedSubcategoryId
+          ? { subcategory_id: selectedSubcategoryId }
+          : stateRules.supportsSubcategories && subcategoryId
+            ? { subcategory_id: subcategoryId }
+            : {}),
         ...(stateRules.supportsLCA
           ? { lca_selection: toLCASelectionType(lcaSelection) }
           : {}),
@@ -156,49 +207,105 @@ export default function App() {
           </select>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="material-select">Select Material Type</label>
-          {materialsLoading ? (
-            <div className="form-status">Loading...</div>
-          ) : materialsError ? (
-            <div className="form-error">{materialsError}</div>
-          ) : materials.length === 0 ? (
-            <div className="form-status">No materials available</div>
-          ) : (
-            <select
-              id="material-select"
-              value={materialCode}
-              onChange={(e) => {
-                setMaterialCode(e.target.value);
-                setSubcategoryId(null); // Reset subcategory when material changes
-              }}
-            >
-              {materials.map((m) => (
-                <option key={m.material_code} value={m.material_code}>
-                  {m.material_name}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
+        {/* Material selection: Oregon uses category/subcategory dropdowns, others use flat material dropdown */}
+        {isOregon ? (
+          <>
+            {/* Oregon Category Selection - Dropdown */}
+            <div className="form-group">
+              <label htmlFor="oregon-category-select">Select Category</label>
+              {materialsLoading ? (
+                <div className="form-status">Loading...</div>
+              ) : materialsError ? (
+                <div className="form-error">{materialsError}</div>
+              ) : oregonCategories.length === 0 ? (
+                <div className="form-status">No categories available</div>
+              ) : (
+                <select
+                  id="oregon-category-select"
+                  value={selectedCategoryId ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value || null;
+                    setSelectedCategoryId(value);
+                    setSelectedSubcategoryId(null); // Reset subcategory when category changes
+                  }}
+                >
+                  <option value="">Select a category</option>
+                  {oregonCategories.map((cat) => (
+                    <option key={cat.category_id} value={cat.category_id}>
+                      {cat.category_name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
 
-        {/* Sub-category selector - only shown when state supports subcategories AND material has subcategories */}
-        {showSubcategorySelector && selectedMaterial?.subcategories && (
-          <div className="form-group">
-            <label htmlFor="subcategory-select">Sub-Category</label>
-            <select
-              id="subcategory-select"
-              value={subcategoryId ?? ""}
-              onChange={(e) => setSubcategoryId(e.target.value || null)}
-            >
-              <option value="">Select a sub-category</option>
-              {selectedMaterial.subcategories.map((sub) => (
-                <option key={sub.subcategory_id} value={sub.subcategory_id}>
-                  {sub.subcategory_name}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Oregon Subcategory Selection - Dropdown (only shown after category is selected) */}
+            {selectedCategory && selectedCategory.subcategories.length > 0 && (
+              <div className="form-group">
+                <label htmlFor="oregon-subcategory-select">Select Subcategory</label>
+                <select
+                  id="oregon-subcategory-select"
+                  value={selectedSubcategoryId ?? ""}
+                  onChange={(e) => setSelectedSubcategoryId(e.target.value || null)}
+                >
+                  <option value="">Select a subcategory</option>
+                  {selectedCategory.subcategories.map((sub) => (
+                    <option key={sub.id} value={sub.id}>
+                      {sub.display_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Colorado/Other states: flat material dropdown */}
+            <div className="form-group">
+              <label htmlFor="material-select">Select Material Type</label>
+              {materialsLoading ? (
+                <div className="form-status">Loading...</div>
+              ) : materialsError ? (
+                <div className="form-error">{materialsError}</div>
+              ) : materials.length === 0 ? (
+                <div className="form-status">No materials available</div>
+              ) : (
+                <select
+                  id="material-select"
+                  value={materialCode}
+                  onChange={(e) => {
+                    setMaterialCode(e.target.value);
+                    setSubcategoryId(null); // Reset subcategory when material changes
+                  }}
+                >
+                  {materials.map((m) => (
+                    <option key={m.material_code} value={m.material_code}>
+                      {m.material_name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Sub-category selector - only shown when state supports subcategories AND material has subcategories */}
+            {showSubcategorySelector && selectedMaterial?.subcategories && (
+              <div className="form-group">
+                <label htmlFor="subcategory-select">Sub-Category</label>
+                <select
+                  id="subcategory-select"
+                  value={subcategoryId ?? ""}
+                  onChange={(e) => setSubcategoryId(e.target.value || null)}
+                >
+                  <option value="">Select a sub-category</option>
+                  {selectedMaterial.subcategories.map((sub) => (
+                    <option key={sub.subcategory_id} value={sub.subcategory_id}>
+                      {sub.subcategory_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </>
         )}
 
         <div className="form-group">
@@ -249,17 +356,17 @@ export default function App() {
 
         <FeeBreakdown
           result={result}
-          baseRate={selectedMaterial?.net_effective_rate_lbs}
+          baseRate={isOregon ? selectedOregonSubcategory?.rate : selectedMaterial?.net_effective_rate_lbs}
           stateRules={stateRules}
         />
 
-        {result && selectedMaterial && (
+        {result && (isOregon ? selectedOregonSubcategory : selectedMaterial) && (
           <FeeExplanation
             state={state}
-            materialLabel={selectedMaterial.material_name}
-            subcategoryLabel={selectedSubcategory?.subcategory_name}
+            materialLabel={isOregon ? (selectedCategory?.category_name ?? "") : selectedMaterial!.material_name}
+            subcategoryLabel={isOregon ? selectedOregonSubcategory?.display_name : selectedSubcategory?.subcategory_name}
             weightLbs={result.weight_lbs}
-            baseRate={selectedMaterial.net_effective_rate_lbs}
+            baseRate={isOregon ? (selectedOregonSubcategory?.rate ?? 0) : selectedMaterial!.net_effective_rate_lbs}
             initialFee={result.initial_fee}
             netFee={result.total_fee}
             lcaSelection={lcaSelection}
