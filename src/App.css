@@ -269,6 +269,23 @@
   color: #484f58;
 }
 
+/* Oregon 80% Operational Portion row */
+.fee-row-operational .fee-row-label {
+  color: #8b949e;
+  font-style: italic;
+}
+
+.fee-row-operational .fee-row-value {
+  color: #8b949e;
+}
+
+/* Label hint (e.g., "(10% of operational)") */
+.fee-row-label-hint {
+  font-size: 0.75rem;
+  color: #6e7681;
+  font-weight: normal;
+}
+
 /* Net Fee row - emphasized */
 .fee-row-total td {
   padding-top: 0.5rem;
@@ -464,6 +481,147 @@
 .lca-radio-label {
   font-size: 0.8125rem;
   color: #c9d1d9;
+}
+
+.lca-radio-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+/* Disabled LCA option styling */
+.lca-radio-option-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.lca-radio-option-disabled:hover {
+  background-color: transparent;
+  border-color: #30363d;
+}
+
+.lca-radio-option-disabled input[type="radio"] {
+  cursor: not-allowed;
+}
+
+.lca-radio-disabled-reason {
+  font-size: 0.6875rem;
+  color: #f0883e;
+  font-style: italic;
+}
+
+.lca-radio-helper-text {
+  display: block;
+  font-size: 0.75rem;
+  color: #8b949e;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+.lca-radio-option-selected {
+  border-color: #58a6ff;
+  background-color: rgba(88, 166, 255, 0.1);
+}
+
+/* 2027 Estimate Toggle */
+.lca-year-toggle {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+}
+
+.lca-year-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #e6edf3;
+}
+
+.lca-year-toggle-label input[type="checkbox"] {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #484f58;
+  border-radius: 4px;
+  background-color: #0d1117;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.lca-year-toggle-label input[type="checkbox"]:hover {
+  border-color: #58a6ff;
+}
+
+.lca-year-toggle-label input[type="checkbox"]:checked {
+  border-color: #58a6ff;
+  background-color: #58a6ff;
+}
+
+.lca-year-toggle-label input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  width: 4px;
+  height: 8px;
+  border: solid #0d1117;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.lca-year-toggle-text {
+  font-weight: 500;
+}
+
+.lca-year-toggle-hint {
+  font-size: 0.75rem;
+  color: #8b949e;
+}
+
+/* Oregon Rate Warning */
+.oregon-rate-warning {
+  background-color: rgba(240, 136, 62, 0.1);
+  border: 1px solid #f0883e;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  color: #f0883e;
+  font-style: italic;
+}
+
+/* Oregon Bonus Summary */
+.oregon-bonus-summary {
+  font-size: 0.875rem;
+  color: #c9d1d9;
+  line-height: 1.6;
+  margin: 0.5rem 0;
+}
+
+.oregon-bonus-summary p {
+  margin: 0.25rem 0;
+}
+
+/* Oregon Bonus Status - Pending Amendment */
+.oregon-bonus-status-pending {
+  background-color: rgba(139, 148, 158, 0.2);
+  color: #8b949e;
+}
+
+/* Policy Verbatim Label */
+.policy-verbatim-label {
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.8125rem;
+  color: #8b949e;
 }
 
 /* ============================================
@@ -913,6 +1071,221 @@
 }
 
 /* ============================================
+   OREGON LCA BONUS SELECTOR
+   ============================================ */
+.oregon-lca-bonuses {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.oregon-bonus-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.75rem;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+}
+
+.oregon-bonus-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.oregon-bonus-checkbox.selected {
+  /* Subtle highlight when selected */
+}
+
+.oregon-bonus-checkbox input[type="checkbox"] {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border: 2px solid #484f58;
+  border-radius: 4px;
+  background-color: #0d1117;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.oregon-bonus-checkbox input[type="checkbox"]:hover {
+  border-color: #3fb950;
+}
+
+.oregon-bonus-checkbox input[type="checkbox"]:checked {
+  border-color: #3fb950;
+  background-color: #3fb950;
+}
+
+.oregon-bonus-checkbox input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  width: 4px;
+  height: 8px;
+  border: solid #0d1117;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.oregon-bonus-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.oregon-bonus-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #c9d1d9;
+}
+
+.oregon-bonus-checkbox.selected .oregon-bonus-label {
+  color: #3fb950;
+}
+
+.oregon-bonus-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.oregon-bonus-status-available {
+  color: #3fb950;
+}
+
+.oregon-bonus-status-future {
+  color: #f0883e;
+}
+
+.oregon-bonus-status-future svg {
+  flex-shrink: 0;
+}
+
+.oregon-bonus-helper {
+  font-size: 0.6875rem;
+  color: #6e7681;
+  line-height: 1.4;
+}
+
+/* Tier dropdown for Bonus B */
+.oregon-bonus-tier-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 1.5rem;
+  padding: 0.5rem 0;
+}
+
+.oregon-bonus-tier-label {
+  font-size: 0.75rem;
+  color: #8b949e;
+}
+
+.oregon-bonus-tier-dropdown {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  color: #c9d1d9;
+  background-color: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+}
+
+.oregon-bonus-tier-dropdown:focus {
+  outline: none;
+  border-color: #58a6ff;
+}
+
+/* Warning indicator for 2027 bonuses */
+.oregon-bonus-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-left: 1.5rem;
+  padding: 0.375rem 0.5rem;
+  background-color: rgba(240, 136, 62, 0.1);
+  border-radius: 4px;
+  font-size: 0.6875rem;
+  color: #f0883e;
+  font-style: italic;
+}
+
+.oregon-bonus-warning svg {
+  flex-shrink: 0;
+}
+
+/* ============================================
+   OREGON LCA BONUS EXPLANATION
+   Rendered below LCA Status selector
+   ============================================ */
+.oregon-lca-explanation {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.oregon-bonus-explanation-item {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.oregon-bonus-explanation-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.oregon-bonus-explanation-header .oregon-bonus-label {
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.oregon-bonus-explanation-header .oregon-bonus-status {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.oregon-bonus-explanation-item .oregon-bonus-helper {
+  font-size: 0.875rem;
+  color: #8b949e;
+  line-height: 1.5;
+}
+
+.oregon-bonus-explanation-item .oregon-bonus-tier-selector {
+  margin-top: 0.5rem;
+}
+
+.oregon-bonus-explanation-item .oregon-bonus-warning {
+  margin-top: 0.25rem;
+}
+
+.oregon-bonus-explanation-item .policy-toggle {
+  align-self: flex-start;
+  margin-top: 0.5rem;
+}
+
+/* ============================================
    CHECKBOX LABEL - For eligibility toggles
    ============================================ */
 .checkbox-label {
@@ -1187,6 +1560,12 @@
   color: #6e7681;
 }
 
+.policy-source-additional {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #30363d;
+}
+
 .policy-quote {
   margin: 0.75rem 0;
   padding: 0.75rem;
@@ -1198,12 +1577,38 @@
 }
 
 /* ============================================
+   CDPHE Source Attribution Note
+   Non-dismissible helper text for audit protection
+   ============================================ */
+.cdphe-source-note {
+  font-size: 0.75rem;
+  color: #8b949e;
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-left: 3px solid #f0883e;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+
+/* ============================================
    CRITERIA STATUS - Running total display
    ============================================ */
 .criteria-status {
   font-size: 0.8125rem;
   color: #8b949e;
   margin-bottom: 0.5rem;
+}
+
+/* Policy source note styling */
+.policy-source-note {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #30363d;
+  font-size: 0.75rem;
+  color: #8b949e;
+  font-style: italic;
 }
 
 /* ============================================

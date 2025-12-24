@@ -29,6 +29,7 @@ import type { CdpheCriteria } from "./components/CdphePerformanceSelector";
 import EcoModulationSelector, { ecoModulationTierToPercent } from "./components/EcoModulationSelector";
 import type { EcoModulationTier } from "./components/EcoModulationSelector";
 import InKindAdvertisingCredit, { isInKindEligible } from "./components/InKindAdvertisingCredit";
+import OregonLcaExplanation from "./components/OregonLcaExplanation";
 import "./App.css";
 
 // Default phase based on feature flag
@@ -73,6 +74,10 @@ export default function App() {
   const [weight, setWeight] = useState(100);
   // LCA selection - explicitly tracked for states that support it (e.g., Oregon)
   const [lcaSelection, setLcaSelection] = useState<LCAOptionType>("none");
+  // Oregon: 2027 Estimate mode toggle (enables Bonus B selection)
+  const [oregon2027Mode, setOregon2027Mode] = useState(false);
+  // Oregon Bonus B tier selection (only used when bonusB is selected in LCA Status)
+  const [oregonBonusBTier, setOregonBonusBTier] = useState<"tier1" | "tier2" | "tier3" | null>(null);
   const [result, setResult] = useState<CalculateResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [materialsLoading, setMaterialsLoading] = useState(false);
@@ -141,6 +146,9 @@ export default function App() {
       setSelectedSubcategoryId(null);
       setSubcategoryId(null);
       setLcaSelection("none");
+      // Reset Oregon LCA state when switching states
+      setOregon2027Mode(false);
+      setOregonBonusBTier(null);
       setResult(null);
       setPhase2Result(null);
       setError(null);
@@ -255,6 +263,7 @@ export default function App() {
       none: "none",
       bonusA: "bonus_a",
       bonusB: "bonus_b",
+      bonusC: "bonus_c", // Disabled in UI - not selectable until 2027
     };
     return mapping[option];
   }
@@ -566,12 +575,23 @@ export default function App() {
           </div>
         </div>
 
-        {/* LCA Selection - only shown for states that support it */}
+        {/* LCA Bonus Selection - only shown for states that support it */}
         {stateRules.supportsLCA && programRules.lcaOptions && (
           <LcaSelector
             value={lcaSelection}
             onChange={setLcaSelection}
             lcaOptions={programRules.lcaOptions}
+            is2027Mode={oregon2027Mode}
+            on2027ModeChange={setOregon2027Mode}
+          />
+        )}
+
+        {/* Oregon LCA Explanation - rendered below LCA Status selector */}
+        {isOregon && (
+          <OregonLcaExplanation
+            selectedOption={lcaSelection}
+            bonusBTier={oregonBonusBTier}
+            onBonusBTierChange={(tier) => setOregonBonusBTier(tier)}
           />
         )}
 

@@ -20,8 +20,14 @@
  * CDPHE explicitly delayed this bonus to allow statewide alignment with standardized
  * national labeling systems (e.g., How2Recycle).
  *
- * Source: Colorado Amended Program Plan (June 2025)
- * Reference: Sections 15.2 (Five-Year Program Budget) & 18.9.2 (CDPHE Proposed Rulemaking, Oct 2025)
+ * CRITICAL SOURCE ATTRIBUTION:
+ * - Primary Source: CDPHE Proposed Producer Responsibility Rules (October 2025)
+ *   Reference: Section 18.9.2 — Performance Bonuses
+ * - Secondary Context: Colorado Amended Program Plan (June 2025)
+ *   See: Page 31 and Page 177 — Eco-Modulation Fund
+ *
+ * The Program Plan authorizes the Eco-Modulation Fund but explicitly states that
+ * CDPHE will establish performance benchmarks and bonus schedules outside of the plan.
  */
 
 import { useState } from "react";
@@ -43,7 +49,11 @@ interface CdphePerformanceSelectorProps {
  * CDPHE Performance Benchmark definitions with exact labels and tooltips.
  * DO NOT modify wording - these match policy documents exactly.
  *
- * Source: Colorado Amended Program Plan (June 2025) & CDPHE Proposed Rulemaking (October 2025)
+ * Primary Source: CDPHE Proposed Producer Responsibility Rules (October 2025)
+ * Reference: Section 18.9.2 — Performance Bonuses
+ *
+ * Note: These criteria and 1% values are defined in the CDPHE rules, NOT the Program Plan.
+ * The Program Plan only authorizes the Eco-Modulation Fund mechanism.
  */
 const CDPHE_BENCHMARKS = [
   {
@@ -72,12 +82,13 @@ const CDPHE_BENCHMARKS = [
     label: "Standardized Sorting Instructions",
     // Exact hover tooltip for disabled benchmark - do not paraphrase
     tooltip: "Performance bonus for standardized on-package sorting instructions becomes available in 2029 per CDPHE Proposed Rule (Section 18.9.2).",
-    // POLICY: Disabled until 2029 per CDPHE Proposed Amendments to Section 18
+    // POLICY: Disabled until 2029 per CDPHE Proposed Rules Section 18.9.2
     // Reason: CDPHE explicitly delayed this bonus to allow statewide alignment
     // with standardized national labeling systems (e.g., How2Recycle).
+    // NOTE: This delay is specified in CDPHE rules, NOT the Program Plan.
     disabled: true,
     // Exact inline note text - do not paraphrase
-    disabledNote: "Available starting in 2029 per CDPHE Proposed Rule.",
+    disabledNote: "Available starting in 2029 per CDPHE Proposed Rule (Section 18.9.2).",
   },
 ];
 
@@ -150,6 +161,14 @@ export default function CdphePerformanceSelector({
       <label className="tier-selector-label">
         CDPHE Performance Benchmarks
       </label>
+
+      {/* Required non-dismissible helper note - source attribution disclosure */}
+      <div className="cdphe-source-note">
+        Criteria and bonus percentages shown below are based on the CDPHE Proposed Producer
+        Responsibility Rules (October 2025). These performance benchmarks are not defined in
+        the Colorado Program Plan and are subject to final adoption.
+      </div>
+
       <div className="criteria-status">
         Selected: {selectedPercent}% reduction (max 10% of Base Dues)
       </div>
@@ -206,18 +225,31 @@ export default function CdphePerformanceSelector({
       {expanded && (
         <div className="policy-explanation">
           <p className="policy-section-title">
-            <strong>Source &amp; Authority — CDPHE Performance Bonus</strong>
+            <strong>Source &amp; Authority: CDPHE Performance Bonuses</strong>
           </p>
+
+          {/* Primary Source - CDPHE Rules */}
           <p className="policy-source">
-            <strong>Document:</strong> Colorado Amended Program Plan (June 2025)<br />
-            <strong>Sections:</strong> 15.2 (Five-Year Program Budget) &amp; 18.9.2 (CDPHE Proposed Rulemaking, Oct 2025)<br />
-            <strong>See:</strong> p. 177 (Eco-Modulation Fund)
+            <strong>Primary Source:</strong> CDPHE Proposed Producer Responsibility Rules (October 2025)<br />
+            <strong>Reference:</strong> Section 18.9.2 — Performance Bonuses
           </p>
+
+          {/* Secondary Context - Program Plan */}
+          <p className="policy-source policy-source-additional">
+            <strong>Secondary Context:</strong> Colorado Amended Program Plan (June 2025)<br />
+            <strong>See:</strong> Page 31 and Page 177 — Eco-Modulation Fund
+          </p>
+
+          <p className="policy-verbatim-label"><strong>Verbatim Plan Language:</strong></p>
           <blockquote className="policy-quote">
-            &ldquo;Verified performance achievements may qualify producers for incremental fee reductions.
-            The bonus for standardized on-package sorting instructions shall be available to producers starting in 2029.
-            Total reductions from the CDPHE-designated bonus schedule shall not exceed 10% of a producer&apos;s base responsibility dues.&rdquo;
+            &ldquo;In 2026, CDPHE will publish additional eco-modulation benchmarks and a bonus schedule that are outside of this program plan.&rdquo;
           </blockquote>
+
+          <p className="policy-source policy-source-note">
+            <strong>Note:</strong> The specific criteria, thresholds, and 1% bonus values shown in this calculator
+            are derived from the CDPHE Proposed Rules, not the Program Plan. The Program Plan authorizes the
+            Eco-Modulation Fund but explicitly delegates benchmark definitions to CDPHE rulemaking.
+          </p>
         </div>
       )}
     </div>

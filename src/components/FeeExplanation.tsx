@@ -1,4 +1,5 @@
 import type { LCAOptionType, ProgramRules } from "../config/programRules";
+import { OREGON_OPERATIONAL_PORTION } from "../config/programRules";
 import type { StateRules } from "../config/stateRules";
 import { ExplanationHighlight } from "./ExplanationHighlight";
 
@@ -35,6 +36,12 @@ function formatRate(value: number): string {
 
 /**
  * Renders the LCA-specific explanation for Oregon.
+ *
+ * Per Oregon Program Plan (2025-2027), Page 218 — Table 24 (Footnote):
+ * "Bonus A is set at 10% discount of base fees (excluding the portion of reserves
+ * in the base fees, which is estimated at approximately 20%). This results in a
+ * net reduction of approximately 8% and not approximately 10% of base fees,
+ * after the application of Bonus A."
  */
 function renderOregonLCAExplanation(
   lcaSelection: LCAOptionType,
@@ -49,6 +56,11 @@ function renderOregonLCAExplanation(
     return null;
   }
 
+  // Calculate the operational portion for explanation
+  const operationalPortion = initialFee * OREGON_OPERATIONAL_PORTION;
+  const operationalPercentDisplay = Math.round(OREGON_OPERATIONAL_PORTION * 100);
+  const reservesPercentDisplay = 100 - operationalPercentDisplay;
+
   if (lcaSelection === "none") {
     return (
       <p className="fee-explanation-paragraph">
@@ -60,40 +72,53 @@ function renderOregonLCAExplanation(
 
   if (lcaSelection === "bonusA") {
     const reductionPercent = lcaOption.reductionPercent;
-    const eligiblePercent = lcaOption.eligiblePortion * 100;
+    const capAmount = lcaOption.capAmount;
 
     return (
-      <p className="fee-explanation-paragraph">
-        You selected <ExplanationHighlight>"{lcaOption.label}"</ExplanationHighlight>.{" "}
-        {lcaOption.description} Under this provision,{" "}
-        <ExplanationHighlight>{reductionPercent}%</ExplanationHighlight> of the
-        eligible fee portion (<ExplanationHighlight>{eligiblePercent}%</ExplanationHighlight>{" "}
-        of the initial fee) is credited back. This results in an LCA bonus of{" "}
-        <ExplanationHighlight>{formatCurrency(lcaAdjustmentAmount)}</ExplanationHighlight>,
-        reducing your fee from <ExplanationHighlight>{formatCurrency(initialFee)}</ExplanationHighlight>{" "}
-        to <ExplanationHighlight>{formatCurrency(netFee)}</ExplanationHighlight>.
-      </p>
+      <>
+        <p className="fee-explanation-paragraph">
+          You selected <ExplanationHighlight>"{lcaOption.label}"</ExplanationHighlight>.{" "}
+          Oregon base fees include a reserves component (approximately {reservesPercentDisplay}% for program reserves).
+          LCA bonuses apply only to the operational portion of the fee (approximately {operationalPercentDisplay}%),
+          not to the reserves portion.
+        </p>
+        <p className="fee-explanation-paragraph">
+          Your base fee of <ExplanationHighlight>{formatCurrency(initialFee)}</ExplanationHighlight> has
+          an operational portion of <ExplanationHighlight>{formatCurrency(operationalPortion)}</ExplanationHighlight>.
+          Under Bonus A, <ExplanationHighlight>{reductionPercent}%</ExplanationHighlight> of this operational
+          portion is credited back{capAmount ? `, up to a cap of ${formatCurrency(capAmount)}` : ""}.
+          This results in an effective reduction of approximately 8% of the total base fee, not 10%.
+        </p>
+        <p className="fee-explanation-paragraph">
+          Your LCA bonus of{" "}
+          <ExplanationHighlight>{formatCurrency(lcaAdjustmentAmount)}</ExplanationHighlight>{" "}
+          reduces your fee from <ExplanationHighlight>{formatCurrency(initialFee)}</ExplanationHighlight>{" "}
+          to <ExplanationHighlight>{formatCurrency(netFee)}</ExplanationHighlight>.
+        </p>
+      </>
     );
   }
 
   if (lcaSelection === "bonusB") {
-    const reductionPercent = lcaOption.reductionPercent;
-    const eligiblePercent = lcaOption.eligiblePortion * 100;
-    const multiplierRange = lcaOption.multiplierRange ?? "variable";
+    const capAmount = lcaOption.capAmount;
 
     return (
-      <p className="fee-explanation-paragraph">
-        You selected <ExplanationHighlight>"{lcaOption.label}"</ExplanationHighlight>.{" "}
-        {lcaOption.description} This enhanced bonus applies a{" "}
-        <ExplanationHighlight>{reductionPercent}%</ExplanationHighlight> reduction
-        to the eligible fee portion (<ExplanationHighlight>{eligiblePercent}%</ExplanationHighlight>{" "}
-        of the initial fee), with a potential multiplier of{" "}
-        <ExplanationHighlight>{multiplierRange}</ExplanationHighlight> based on
-        demonstrated impact reductions. Your LCA bonus of{" "}
-        <ExplanationHighlight>{formatCurrency(lcaAdjustmentAmount)}</ExplanationHighlight>{" "}
-        reduces the fee from <ExplanationHighlight>{formatCurrency(initialFee)}</ExplanationHighlight>{" "}
-        to <ExplanationHighlight>{formatCurrency(netFee)}</ExplanationHighlight>.
-      </p>
+      <>
+        <p className="fee-explanation-paragraph">
+          You selected <ExplanationHighlight>"{lcaOption.label}"</ExplanationHighlight>.{" "}
+          Oregon base fees include a reserves component (approximately {reservesPercentDisplay}% for program reserves).
+          LCA bonuses apply only to the operational portion of the fee (approximately {operationalPercentDisplay}%),
+          not to the reserves portion.
+        </p>
+        <p className="fee-explanation-paragraph">
+          Bonus B applies a tier-based flat credit based on demonstrated environmental impact reduction
+          {capAmount ? `, up to a cap of ${formatCurrency(capAmount)}` : ""}.
+          Your LCA bonus of{" "}
+          <ExplanationHighlight>{formatCurrency(lcaAdjustmentAmount)}</ExplanationHighlight>{" "}
+          reduces the fee from <ExplanationHighlight>{formatCurrency(initialFee)}</ExplanationHighlight>{" "}
+          to <ExplanationHighlight>{formatCurrency(netFee)}</ExplanationHighlight>.
+        </p>
+      </>
     );
   }
 

@@ -1,5 +1,6 @@
 import type { CalculateResponse, LCABonus } from "../services/api";
 import type { StateRules } from "../config/stateRules";
+import { OREGON_OPERATIONAL_PORTION } from "../config/programRules";
 
 interface FeeBreakdownProps {
   result: CalculateResponse | null;
@@ -69,6 +70,13 @@ export default function FeeBreakdown({
     );
   }
 
+  // Oregon 80% operational portion calculation
+  // Per Oregon Program Plan (2025-2027), Page 218 — Table 24 (Footnote):
+  // LCA bonuses apply only to the operational portion (~80%) of base fees,
+  // not the reserve portion (~20%).
+  const isOregon = result.state.toLowerCase() === "oregon";
+  const operationalPortion = isOregon ? result.initial_fee * OREGON_OPERATIONAL_PORTION : null;
+
   return (
     <div className={breakdownClass}>
       <div className="fee-display">
@@ -98,15 +106,28 @@ export default function FeeBreakdown({
               )}
 
               <tr className="fee-row fee-row-subtotal">
-                <td className="fee-row-label">Initial Fee</td>
+                <td className="fee-row-label">Base Fee</td>
                 <td className="fee-row-value">{formatCurrency(result.initial_fee)}</td>
               </tr>
+
+              {/* Oregon 80% Operational Portion: Show when state supports LCA and bonus is claimed */}
+              {isOregon && hasLCABonus && operationalPortion !== null && (
+                <tr className="fee-row fee-row-operational">
+                  <td className="fee-row-label">Operational Portion (80%)</td>
+                  <td className="fee-row-value">{formatCurrency(operationalPortion)}</td>
+                </tr>
+              )}
 
               {/* LCA Adjustment: Only shown for states that support it (e.g. Oregon)
                   or if API returned a non-zero bonus. Colorado hides this entirely. */}
               {showLCARow && (
                 <tr className={`fee-row ${hasLCABonus ? "fee-row-credit" : "fee-row-zero"}`}>
-                  <td className="fee-row-label">{getLCABonusLabel(result.lca_bonus)}</td>
+                  <td className="fee-row-label">
+                    {getLCABonusLabel(result.lca_bonus)}
+                    {isOregon && hasLCABonus && (
+                      <span className="fee-row-label-hint"> (10% of operational)</span>
+                    )}
+                  </td>
                   <td className="fee-row-value">
                     {hasLCABonus ? `-${formatCurrency(result.lca_bonus.amount)}` : formatCurrency(0)}
                   </td>

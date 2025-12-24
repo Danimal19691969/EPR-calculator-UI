@@ -8,21 +8,43 @@
  * Add TODO comments for any values that need verification.
  */
 
-export type LCAOptionType = "none" | "bonusA" | "bonusB";
+export type LCAOptionType = "none" | "bonusA" | "bonusB" | "bonusC";
+
+/**
+ * Oregon 80% Operational Fee Rule
+ *
+ * Per Oregon Program Plan (2025-2027), Page 218 — Table 24 (Footnote):
+ * "Bonus A is set at 10% discount of base fees (excluding the portion of reserves
+ * in the base fees, which is estimated at approximately 20%). This results in a
+ * net reduction of approximately 8% and not approximately 10% of base fees,
+ * after the application of Bonus A."
+ *
+ * This means LCA bonuses apply ONLY to the operational portion (~80%) of base fees,
+ * NOT the reserve portion (~20%).
+ */
+export const OREGON_OPERATIONAL_PORTION = 0.80;
+export const OREGON_RESERVES_PORTION = 0.20;
 
 export interface LCAOption {
   /** Display label for the option */
   label: string;
   /** Plain-language description of what this option means */
   description: string;
-  /** Percentage reduction applied to eligible portion (e.g., 25 = 25%) */
+  /** Percentage reduction applied to base fee (e.g., 10 = 10%) - for Bonus A */
   reductionPercent: number;
-  /** Portion of fee eligible for reduction (e.g., 0.8 = 80%) */
-  eligiblePortion: number;
   /** Maximum dollar cap on the bonus amount */
   capAmount: number | null;
-  /** For Bonus B: multiplier range description (e.g., "1.5x to 3x") */
-  multiplierRange?: string;
+  /** Whether this option is disabled (e.g., not yet available) */
+  disabled?: boolean;
+  /** Message to display when disabled */
+  disabledReason?: string;
+  /** Whether this option requires 2027 estimate mode */
+  requires2027?: boolean;
+  /**
+   * Helper text explaining the option's behavior.
+   * Used for tooltips and inline hints.
+   */
+  helperText?: string;
 }
 
 export interface ProgramRules {
@@ -45,33 +67,47 @@ export interface ProgramRules {
  * Life Cycle Assessment (LCA) bonus provisions for producers who
  * demonstrate environmental responsibility.
  *
- * TODO: Verify exact percentages and caps against official DEQ documentation
+ * IMPORTANT: Bonus A and Bonus B are MUTUALLY EXCLUSIVE per Oregon Program Plan p.214:
+ * "For each SKU or batch of SKUs, a producer will be eligible for either Bonus A or Bonus B, but not both bonuses."
+ *
+ * Source: Oregon Program Plan (2025-2027), Pages 212-216
  */
 const OREGON_LCA_OPTIONS: Record<LCAOptionType, LCAOption> = {
   none: {
-    label: "No LCA Performed",
+    label: "None",
     description:
-      "No Life Cycle Assessment has been conducted for this packaging. The full base fee applies without adjustment.",
+      "No LCA bonus claimed. The full base fee applies without adjustment.",
     reductionPercent: 0,
-    eligiblePortion: 0,
     capAmount: null,
   },
   bonusA: {
-    label: "Bonus A – LCA Disclosure",
+    label: "Bonus A (Disclosure)",
     description:
-      "A Life Cycle Assessment (LCA) is a comprehensive evaluation of a product's environmental impact across its entire lifecycle, from raw material extraction through disposal. Bonus A applies when a producer has completed and publicly disclosed an LCA for their packaging.",
-    reductionPercent: 25, // TODO: Verify against DEQ documentation
-    eligiblePortion: 0.8, // TODO: Verify - 80% of fee eligible
-    capAmount: null, // TODO: Verify if cap exists
+      "10% reduction applied to operational fees only (excludes ~20% program reserves). Effective reduction is approximately 8% of total base fees. Cap: $20,000 per SKU. Limit: Max 10 SKUs per producer.",
+    reductionPercent: 10,
+    capAmount: 20000,
+    helperText:
+      "10% reduction applied to operational fees only (excludes ~20% program reserves). Effective reduction is approximately 8% of total base fees.",
   },
   bonusB: {
-    label: "Bonus B – LCA With Impact Reduction",
+    label: "Bonus B (Impact Reduction)",
     description:
-      "Bonus B applies when a producer has not only completed an LCA but has also demonstrated measurable reductions in environmental impact based on the assessment findings. This enhanced bonus recognizes active steps toward sustainability.",
-    reductionPercent: 50, // TODO: Verify against DEQ documentation
-    eligiblePortion: 0.8, // TODO: Verify - 80% of fee eligible
-    capAmount: null, // TODO: Verify if cap exists
-    multiplierRange: "1.5x to 3x", // TODO: Verify multiplier structure
+      "Higher reward for demonstrating 10-70%+ impact reduction. Applies to operational fees only (excludes ~20% program reserves). Cap: $50,000 per SKU.",
+    reductionPercent: 0, // Uses tier-based flat credits instead
+    capAmount: 50000,
+    requires2027: true,
+    disabledReason: "Available for 2027 Fees only",
+    helperText:
+      "Tier-based credit applied to operational fees only (excludes ~20% program reserves).",
+  },
+  bonusC: {
+    label: "Bonus C: Reuse Transition (Pending Amendment)",
+    description:
+      "Bonus C details will be submitted in a future program plan amendment.",
+    reductionPercent: 0,
+    capAmount: null,
+    disabled: true,
+    disabledReason: "Pending Amendment",
   },
 };
 
