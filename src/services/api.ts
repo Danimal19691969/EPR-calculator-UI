@@ -1,8 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-if (!API_BASE_URL) {
-  throw new Error("VITE_API_BASE_URL is not defined");
-}
+// API base URL - empty string in dev (uses Vite proxy), full URL in production
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 /**
  * Sub-category for materials that have granular classifications.
@@ -93,6 +90,53 @@ export interface CalculateResponse {
   program_start: string | null;
 }
 
+// ============================================
+// COLORADO PHASE 2 TYPES
+// ============================================
+
+/**
+ * Colorado Phase 2 aggregated group from /materials/colorado/phase2/groups
+ */
+export interface ColoradoPhase2Group {
+  group_key: string;
+  group_name: string;
+  status: string; // e.g., "MRL", "NC", "C"
+  base_rate_per_lb: number;
+}
+
+export interface ColoradoPhase2GroupsResponse {
+  state: string;
+  phase: string;
+  groups: ColoradoPhase2Group[];
+}
+
+/**
+ * Colorado Phase 2 calculate request payload
+ */
+export interface ColoradoPhase2CalculateRequest {
+  aggregated_group: string;
+  weight_lbs: number;
+  pro_modulation_percent: number;
+  cdphe_bonus_percent: number;
+  newspaper_credit: number;
+}
+
+/**
+ * Colorado Phase 2 calculate response
+ */
+export interface ColoradoPhase2CalculateResponse {
+  aggregated_group: string;
+  weight_lbs: number;
+  base_rate_per_lb: number;
+  base_dues: number;
+  after_eco_modulation: number;
+  after_cdphe_bonus: number;
+  final_payable: number;
+  pro_modulation_percent: number;
+  cdphe_bonus_percent: number;
+  newspaper_credit: number;
+}
+
 export async function fetchMaterials(state: string): Promise<Material[]> {
   const res = await fetch(
     `${API_BASE_URL}/materials/${encodeURIComponent(state)}`
@@ -177,6 +221,68 @@ export async function calculateEPR(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(apiPayload),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`API error ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
+// ============================================
+// COLORADO PHASE 2 API FUNCTIONS
+// ============================================
+
+/**
+ * Fetch Colorado Phase 2 aggregated groups.
+ * Used when user selects Colorado + Phase 2 mode.
+ *
+ * NOTE: Backend returns a raw array, NOT a wrapped object.
+ */
+export async function fetchColoradoPhase2Groups(): Promise<ColoradoPhase2Group[]> {
+  const res = await fetch(`${API_BASE_URL}/materials/colorado/phase2/groups`);
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to fetch Colorado Phase 2 groups: ${text}`);
+  }
+
+  const json = await res.json();
+
+  // Strict runtime guard: response must be an array
+  if (!Array.isArray(json)) {
+    throw new Error("Phase 2 groups response is not an array");
+  }
+
+  // Treat empty array as error - no groups means nothing to display
+  if (json.length === 0) {
+    throw new Error("No Phase 2 material groups available");
+  }
+
+  return json;
+}
+
+/**
+ * Calculate Colorado Phase 2 fee.
+ * Uses the dedicated Phase 2 endpoint with eco-modulation and CDPHE bonus.
+ */
+export async function calculateColoradoPhase2(
+  payload: ColoradoPhase2CalculateRequest
+): Promise<ColoradoPhase2CalculateResponse> {
+  // HARD GUARD: Validate required fields
+  if (!payload.aggregated_group) {
+    throw new Error("Colorado Phase 2 requires aggregated_group");
+  }
+  if (payload.weight_lbs <= 0) {
+    throw new Error("Weight must be greater than 0");
+  }
+
+  const res = await fetch(`${API_BASE_URL}/calculate/colorado/phase2`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {

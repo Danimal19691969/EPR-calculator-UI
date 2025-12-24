@@ -379,11 +379,26 @@
    ESTIMATOR FOOTER - Legal Reference
    ============================================ */
 .estimator-footer {
-  margin-top: 12px;
+  margin-top: 16px;
   font-size: 11px;
   color: #9ca3af;
   text-align: center;
+}
+
+.footer-statute {
   opacity: 0.8;
+}
+
+.footer-compliance-notice {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background-color: rgba(30, 41, 59, 0.5);
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #8b949e;
+  text-align: left;
 }
 
 /* ============================================
@@ -449,5 +464,781 @@
 .lca-radio-label {
   font-size: 0.8125rem;
   color: #c9d1d9;
+}
+
+/* ============================================
+   PHASE SELECTOR - Colorado Phase 1/Phase 2 Toggle
+   ============================================ */
+.phase-selector-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #8b949e;
+  margin-bottom: 0.5rem;
+}
+
+.phase-selector {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.phase-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.625rem 0.75rem;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.phase-option:hover {
+  border-color: #484f58;
+  background-color: #161b22;
+}
+
+.phase-option.selected {
+  border-color: #58a6ff;
+  background-color: rgba(88, 166, 255, 0.1);
+}
+
+.phase-option input[type="radio"] {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #484f58;
+  border-radius: 50%;
+  background-color: #0d1117;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.phase-option input[type="radio"]:checked {
+  border-color: #58a6ff;
+  background-color: #0d1117;
+}
+
+.phase-option input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background-color: #58a6ff;
+  border-radius: 50%;
+}
+
+.phase-option-label {
+  font-size: 0.8125rem;
+  color: #c9d1d9;
+}
+
+.phase-option.selected .phase-option-label {
+  color: #58a6ff;
+}
+
+/* Informational phase display (when only one option is available) */
+/* NOTE: Styled as neutral informational label, not as a selected control */
+.phase-info-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.625rem 0.75rem;
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+}
+
+.phase-info-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #c9d1d9;
+}
+
+.phase-law-reference {
+  font-size: 0.6875rem;
+  color: #8b949e;
+  font-style: italic;
+}
+
+/* Legacy: Locked phase display (deprecated, kept for compatibility) */
+.phase-selector-locked {
+  display: flex;
+  align-items: center;
+  padding: 0.625rem 0.75rem;
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+}
+
+.phase-locked-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #c9d1d9;
+}
+
+/* ============================================
+   FORM HINTS - Helper text below inputs
+   ============================================ */
+.form-hint {
+  font-size: 0.6875rem;
+  color: #6e7681;
+  margin-top: 0.375rem;
+}
+
+.form-hint-muted {
+  color: #484f58;
+  font-style: italic;
+}
+
+/* ============================================
+   DISABLED FORM GROUP - Non-eligible options
+   ============================================ */
+.form-group-disabled {
+  opacity: 0.6;
+}
+
+.form-group-disabled .checkbox-label-disabled {
+  cursor: not-allowed;
+}
+
+.form-group-disabled .checkbox-label-disabled input[type="checkbox"] {
+  cursor: not-allowed;
+  border-color: #30363d;
+}
+
+.form-group-disabled .checkbox-label-disabled input[type="checkbox"]:hover {
+  border-color: #30363d;
+}
+
+.form-group-disabled .checkbox-label-text {
+  color: #6e7681;
+}
+
+/* ============================================
+   NUMBER FIELD - Shared styles for numeric inputs
+   ============================================ */
+.number-field {
+  display: flex;
+  align-items: stretch;
+}
+
+.number-input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #c9d1d9;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.number-input:focus {
+  outline: none;
+  border-color: #58a6ff;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3),
+    0 0 0 2px rgba(88, 166, 255, 0.2);
+}
+
+.number-stepper {
+  display: flex;
+  flex-direction: column;
+  background-color: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 0 6px 6px 0;
+}
+
+.step-btn {
+  flex: 1;
+  padding: 0 0.5rem;
+  font-size: 0.5rem;
+  color: #8b949e;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.step-btn:hover {
+  background-color: #30363d;
+  color: #c9d1d9;
+}
+
+.step-btn:active {
+  background-color: #484f58;
+}
+
+.step-up {
+  border-bottom: 1px solid #30363d;
+  border-radius: 0 6px 0 0;
+}
+
+.step-down {
+  border-radius: 0 0 6px 0;
+}
+
+/* ============================================
+   TIER SELECTOR - Compliance-safe radio groups
+   ============================================ */
+.tier-selector-label {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #c9d1d9;
+  margin-bottom: 0.5rem;
+}
+
+.tier-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.tier-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.tier-option:hover {
+  border-color: #484f58;
+  background-color: #161b22;
+}
+
+.tier-option.selected {
+  border-color: #58a6ff;
+  background-color: rgba(88, 166, 255, 0.1);
+}
+
+.tier-option input[type="radio"] {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #484f58;
+  border-radius: 50%;
+  background-color: #0d1117;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.tier-option input[type="radio"]:checked {
+  border-color: #58a6ff;
+  background-color: #0d1117;
+}
+
+.tier-option input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background-color: #58a6ff;
+  border-radius: 50%;
+}
+
+.tier-option-label {
+  font-size: 0.8125rem;
+  color: #c9d1d9;
+}
+
+.tier-option.selected .tier-option-label {
+  color: #58a6ff;
+}
+
+/* ============================================
+   ECO-MODULATION TIER SELECTOR - Enriched guidance
+   ============================================ */
+.eco-tier-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.eco-tier-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.eco-tier-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.625rem 0.75rem;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.eco-tier-option:hover {
+  border-color: #484f58;
+  background-color: #161b22;
+}
+
+.eco-tier-option.selected {
+  border-color: #58a6ff;
+  background-color: rgba(88, 166, 255, 0.1);
+}
+
+.eco-tier-option input[type="radio"] {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  border: 2px solid #484f58;
+  border-radius: 50%;
+  background-color: #0d1117;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.eco-tier-option input[type="radio"]:checked {
+  border-color: #58a6ff;
+  background-color: #0d1117;
+}
+
+.eco-tier-option input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background-color: #58a6ff;
+  border-radius: 50%;
+}
+
+.eco-tier-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.eco-tier-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #c9d1d9;
+}
+
+.eco-tier-option.selected .eco-tier-label {
+  color: #58a6ff;
+}
+
+.eco-tier-short-desc {
+  font-size: 0.6875rem;
+  color: #6e7681;
+}
+
+.eco-tier-option.selected .eco-tier-short-desc {
+  color: #8b949e;
+}
+
+/* Expanded guidance panel for selected tier */
+.eco-tier-guidance {
+  margin-left: 1.5rem;
+  padding: 0.625rem 0.75rem;
+  background-color: rgba(88, 166, 255, 0.05);
+  border: 1px solid rgba(88, 166, 255, 0.2);
+  border-radius: 6px;
+}
+
+.eco-tier-guidance-header {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #58a6ff;
+  margin-bottom: 0.5rem;
+}
+
+.eco-tier-guidance-header svg {
+  flex-shrink: 0;
+}
+
+.eco-tier-guidance-list {
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.6875rem;
+  color: #8b949e;
+  line-height: 1.5;
+}
+
+.eco-tier-guidance-list li {
+  margin-bottom: 0.25rem;
+}
+
+.eco-tier-guidance-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* Disclaimer styling for eco-modulation */
+.eco-tier-disclaimer {
+  font-style: italic;
+  color: #6e7681;
+}
+
+/* Policy note in disclosure */
+.policy-note {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: #f0883e;
+  font-style: italic;
+}
+
+/* ============================================
+   CHECKBOX LABEL - For eligibility toggles
+   ============================================ */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.5rem 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #484f58;
+  border-radius: 4px;
+  background-color: #0d1117;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.checkbox-label input[type="checkbox"]:hover {
+  border-color: #58a6ff;
+}
+
+.checkbox-label input[type="checkbox"]:checked {
+  border-color: #58a6ff;
+  background-color: #58a6ff;
+}
+
+.checkbox-label input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  width: 4px;
+  height: 8px;
+  border: solid #0d1117;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox-label-text {
+  font-size: 0.8125rem;
+  color: #c9d1d9;
+}
+
+/* ============================================
+   CONDITIONAL INPUT - Input that appears after checkbox
+   ============================================ */
+.conditional-input {
+  margin-top: 0.75rem;
+  padding-left: 1.5rem;
+  border-left: 2px solid #30363d;
+}
+
+.conditional-input-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #6e7681;
+  margin-bottom: 0.375rem;
+}
+
+/* ============================================
+   CRITERIA SELECTOR - Multi-checkbox eligibility
+   ============================================ */
+.criteria-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.criteria-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.criteria-option:hover {
+  border-color: #484f58;
+  background-color: #161b22;
+}
+
+.criteria-option.selected {
+  border-color: #3fb950;
+  background-color: rgba(63, 185, 80, 0.1);
+}
+
+.criteria-option input[type="checkbox"] {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #484f58;
+  border-radius: 4px;
+  background-color: #0d1117;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.criteria-option input[type="checkbox"]:checked {
+  border-color: #3fb950;
+  background-color: #3fb950;
+}
+
+.criteria-option input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  width: 4px;
+  height: 8px;
+  border: solid #0d1117;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.criteria-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.criteria-option-label {
+  font-size: 0.8125rem;
+  color: #c9d1d9;
+}
+
+.criteria-option.selected .criteria-option-label {
+  color: #3fb950;
+}
+
+/* Tooltip text shown below label */
+.criteria-option-tooltip {
+  font-size: 0.6875rem;
+  color: #6e7681;
+  line-height: 1.4;
+}
+
+/* Disabled benchmark option */
+.criteria-option-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.criteria-option-disabled input[type="checkbox"] {
+  cursor: not-allowed;
+}
+
+.criteria-option-disabled .criteria-option-label {
+  color: #6e7681;
+}
+
+/* Benchmark wrapper for note display */
+.benchmark-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Disabled benchmark note with icon */
+.benchmark-disabled-note {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding-left: 0.5rem;
+  font-size: 0.6875rem;
+  color: #f0883e;
+  font-style: italic;
+}
+
+.benchmark-disabled-note svg {
+  flex-shrink: 0;
+}
+
+/* ============================================
+   POLICY TOGGLE - Collapsible explanation trigger
+   ============================================ */
+.policy-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #58a6ff;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.policy-toggle:hover {
+  color: #79c0ff;
+  text-decoration: underline;
+}
+
+.policy-toggle:focus {
+  outline: none;
+  text-decoration: underline;
+}
+
+/* Reset button styles for policy toggle */
+.policy-toggle:active {
+  transform: none;
+  box-shadow: none;
+}
+
+/* ============================================
+   POLICY EXPLANATION - Collapsible content block
+   ============================================ */
+.policy-explanation {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  color: #8b949e;
+  line-height: 1.5;
+}
+
+.policy-explanation p {
+  margin: 0 0 0.5rem 0;
+}
+
+.policy-explanation p:last-child {
+  margin-bottom: 0;
+}
+
+.policy-explanation ul {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+
+.policy-explanation li {
+  margin-bottom: 0.25rem;
+}
+
+.policy-explanation strong {
+  color: #c9d1d9;
+}
+
+.policy-disclaimer {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #30363d;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: #6e7681;
+}
+
+.policy-source {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #30363d;
+  font-size: 0.75rem;
+  color: #6e7681;
+}
+
+.policy-quote {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  background-color: #0d1117;
+  border-left: 3px solid #30363d;
+  font-style: italic;
+  font-size: 0.75rem;
+  color: #8b949e;
+}
+
+/* ============================================
+   CRITERIA STATUS - Running total display
+   ============================================ */
+.criteria-status {
+  font-size: 0.8125rem;
+  color: #8b949e;
+  margin-bottom: 0.5rem;
+}
+
+/* ============================================
+   FEE DISPLAY SCENARIO - Medium Scenario label
+   ============================================ */
+.fee-display-scenario {
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #58a6ff;
+  margin-top: 0.375rem;
+}
+
+.fee-scenario-hint {
+  margin-top: 0.75rem;
+  font-size: 0.6875rem;
+  color: #6e7681;
+  font-style: italic;
+}
+
+/* Fee row for adjustments - descriptive, no value column */
+.fee-row-adjustment .fee-row-label {
+  color: #f0883e;
+}
+
+/* Layer headers in fee breakdown - separates PRO and CDPHE layers */
+.fee-row-layer-header td {
+  padding-top: 0.625rem;
+  padding-bottom: 0.25rem;
+  border-top: 1px solid #21262d;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #58a6ff;
 }
 

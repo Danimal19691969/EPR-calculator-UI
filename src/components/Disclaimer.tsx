@@ -1,21 +1,15 @@
 import { AlertTriangle } from "lucide-react";
-import { getStateLegal } from "../config/stateLegal";
-
-interface DisclaimerProps {
-  state: string;
-}
 
 /**
  * Disclaimer Component
  *
- * Renders a prominent, state-aware legal disclaimer with warning styling.
+ * Renders a prominent, state-agnostic legal disclaimer with warning styling.
  * Displayed near the top of the calculator, below the header.
  *
- * The disclaimer references the correct statute for the selected state.
+ * NOTE: This disclaimer is intentionally state-agnostic and must be
+ * identical for all states. Do not add state-specific references.
  */
-export default function Disclaimer({ state }: DisclaimerProps) {
-  const legal = getStateLegal(state);
-
+export default function Disclaimer() {
   return (
     <div className="disclaimer-card">
       <div className="disclaimer-header">
@@ -33,11 +27,7 @@ export default function Disclaimer({ state }: DisclaimerProps) {
       <p>
         Producers must consult with compliance professionals, the state agency,
         and/or the applicable producer responsibility organization to confirm
-        their compliance obligation and total fees under{" "}
-        <strong>
-          {legal.statuteReference} – {legal.lawName}
-        </strong>
-        .
+        their compliance obligation and total fees.
       </p>
     </div>
   );

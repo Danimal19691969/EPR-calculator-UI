@@ -7,11 +7,13 @@ import App from './App';
 vi.mock('./services/api', () => ({
   fetchMaterials: vi.fn(),
   fetchOregonGroupedMaterials: vi.fn(),
+  fetchColoradoPhase2Groups: vi.fn(),
   calculateEPR: vi.fn(),
+  calculateColoradoPhase2: vi.fn(),
 }));
 
 // Import mocked functions for assertions
-import { fetchMaterials, fetchOregonGroupedMaterials, calculateEPR } from './services/api';
+import { fetchMaterials, fetchOregonGroupedMaterials, fetchColoradoPhase2Groups, calculateEPR, calculateColoradoPhase2 } from './services/api';
 
 const mockOregonCategories = {
   state: 'Oregon',
@@ -39,6 +41,11 @@ const mockColoradoMaterials = [
   { material_code: 'PET', material_name: 'PET Plastic', material_class: 'Plastic', net_effective_rate_lbs: 0.03, covered: true, recyclable: true, compostable: false },
 ];
 
+const mockColoradoPhase2Groups = [
+  { group_key: 'plastic_rigid', group_name: 'Plastic - Rigid', status: 'MRL', base_rate_per_lb: 0.02 },
+  { group_key: 'paper_cardboard', group_name: 'Paper - Cardboard', status: 'MRL', base_rate_per_lb: 0.015 },
+];
+
 const mockCalculateResponse = {
   state: 'oregon',
   weight_lbs: 100,
@@ -49,13 +56,29 @@ const mockCalculateResponse = {
   program_start: '2025-07-01',
 };
 
+const mockPhase2CalculateResponse = {
+  aggregated_group: 'plastic_rigid',
+  weight_lbs: 100,
+  base_rate_per_lb: 0.02,
+  base_dues: 2.00,
+  after_eco_modulation: 2.00,
+  after_cdphe_bonus: 2.00,
+  final_payable: 2.00,
+  pro_modulation_percent: 0,
+  cdphe_bonus_percent: 0,
+  newspaper_credit: 0,
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
 
-  // Default: Colorado materials load
+  // Default: Colorado materials load (Phase 1 - now hidden but still mocked)
   (fetchMaterials as any).mockResolvedValue(mockColoradoMaterials);
+  // Default: Colorado Phase 2 groups load (now the default)
+  (fetchColoradoPhase2Groups as any).mockResolvedValue(mockColoradoPhase2Groups);
   (fetchOregonGroupedMaterials as any).mockResolvedValue(mockOregonCategories);
   (calculateEPR as any).mockResolvedValue(mockCalculateResponse);
+  (calculateColoradoPhase2 as any).mockResolvedValue(mockPhase2CalculateResponse);
 });
 
 describe('Oregon subcategory selection flow', () => {
@@ -219,39 +242,39 @@ describe('Oregon subcategory selection flow', () => {
   });
 });
 
-describe('Colorado material selection flow', () => {
-  it('should work correctly with Colorado material selection', async () => {
+describe('Colorado Phase 2 material group selection flow', () => {
+  it('should work correctly with Colorado Phase 2 material group selection', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // Wait for Colorado materials to load (default state)
+    // Wait for Colorado Phase 2 groups to load (now the default)
     await waitFor(() => {
-      expect(screen.getByLabelText(/select material type/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/select material group/i)).toBeInTheDocument();
     });
 
-    // Select a material
-    await user.selectOptions(screen.getByLabelText(/select material type/i), 'HDPE');
+    // Verify the locked phase selector shows 2026 Program
+    expect(screen.getByText('2026 Program (HB22-1355)')).toBeInTheDocument();
+
+    // Select a material group
+    await user.selectOptions(screen.getByLabelText(/select material group/i), 'plastic_rigid');
 
     // Click Estimate
     await user.click(screen.getByRole('button', { name: /estimate/i }));
 
-    // calculateEPR should have been called with Colorado payload
+    // calculateColoradoPhase2 should have been called with Phase 2 payload
     await waitFor(() => {
-      expect(calculateEPR).toHaveBeenCalledWith(
+      expect(calculateColoradoPhase2).toHaveBeenCalledWith(
         expect.objectContaining({
-          state: 'Colorado',
-          material: 'HDPE',
+          aggregated_group: 'plastic_rigid',
           weight_lbs: expect.any(Number),
+          pro_modulation_percent: 0,
+          cdphe_bonus_percent: 0,
+          newspaper_credit: 0,
         })
       );
     });
 
-    // Should NOT have Oregon fields
-    expect(calculateEPR).toHaveBeenCalledWith(
-      expect.not.objectContaining({
-        material_category: expect.anything(),
-        sub_category: expect.anything(),
-      })
-    );
+    // Phase 1 calculateEPR should NOT have been called
+    expect(calculateEPR).not.toHaveBeenCalled();
   });
 });
