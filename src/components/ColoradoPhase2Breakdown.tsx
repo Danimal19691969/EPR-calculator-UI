@@ -5,26 +5,13 @@
  * Uses JBC-Approved Medium Scenario rates.
  *
  * CALCULATION APPROACH:
- * Dollar deltas are computed client-side from base_dues and percentage values returned
- * by the API. This ensures accurate intermediate values while maintaining NaN safety
- * through guarded formatting functions.
+ * Uses computeColoradoPhase2DerivedValues() as the SINGLE SOURCE OF TRUTH for all
+ * derived values. This ensures PDF/UI parity - both UI and PDF export use the same
+ * utility function, eliminating any possible divergence.
  *
  * TWO-LAYER FEE ADJUSTMENT MODEL (Critical — Do Not Collapse):
  * PRO eco-modulation and CDPHE bonuses must be treated as two separate layers.
- *
- * CALCULATION ORDER (Must Match Program Plan):
- * 1. BaseDues = Weight × JBC-Approved Medium Scenario Rate
- * 2. Layer 1: Apply PRO Eco-Modulation (Mandatory, UNCAPPED)
- *    - ProDelta = BaseDues × pro_modulation_percent
- *    - AfterPro = BaseDues − ProDelta
- *    - No 10% cap applies to this layer
- * 3. Layer 2: Apply CDPHE Performance Benchmarks (Optional, CAPPED)
- *    - CDPHEBonusPercent = min(sum(selectedBonuses × 1%), 10%)
- *    - CDPHEDelta = BaseDues × CDPHEBonusPercent
- *    - AfterCDPHE = AfterPro − CDPHEDelta
- *    - The 10% cap applies ONLY to the CDPHE layer
- * 4. Apply In-Kind Advertising Credit (final deduction, if eligible)
- * 5. FinalPayable = max(0, AfterCDPHE − InKindCredit)
+ * See coloradoPhase2DerivedValues.ts for calculation order documentation.
  *
  * Source: Colorado Amended Program Plan (June 2025) & CDPHE Proposed Rulemaking (Oct 2025)
  * Reference: Sections 15.2 (Five-Year Program Budget) & 18.9.2 (CDPHE Proposed Rulemaking)
@@ -32,10 +19,19 @@
 
 import { useState } from "react";
 import type { ColoradoPhase2CalculateResponse } from "../services/api";
+import { computeColoradoPhase2DerivedValues } from "../utils/coloradoPhase2DerivedValues";
 
 interface ColoradoPhase2BreakdownProps {
   result: ColoradoPhase2CalculateResponse | null;
   groupName?: string;
+  /**
+   * SINGLE SOURCE OF TRUTH: Resolved rate from the groups API.
+   * This is the ONLY rate used for display - calculation response rate is ignored.
+   * This ensures UI/PDF parity and prevents backend rate mismatches.
+   *
+   * REQUIRED: Must be provided. If null, the rate is considered invalid.
+   */
+  resolvedRate: number | null;
 }
 
 function formatCurrency(value: number): string {
@@ -61,10 +57,16 @@ function formatPercent(value: number): string {
   }).format(value);
 }
 
-function formatRate(value: number): string {
-  // Guard against NaN/undefined
-  if (typeof value !== "number" || isNaN(value)) {
-    return "$0.0000";
+/**
+ * Format rate for display.
+ * CRITICAL: Returns "—" for invalid/zero/null rates to surface data problems.
+ * A rate of 0 or null indicates missing backend data or a lookup failure.
+ */
+function formatRate(value: number | null): string {
+  // Guard against null/NaN/undefined/0 - these indicate data problems
+  // Do NOT silently display "$0.0000" as that hides the real issue
+  if (value === null || typeof value !== "number" || isNaN(value) || !isFinite(value) || value <= 0) {
+    return "—";
   }
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -74,9 +76,17 @@ function formatRate(value: number): string {
   }).format(value);
 }
 
+/**
+ * Check if a rate is valid (positive, finite number).
+ */
+function isValidRate(value: number): boolean {
+  return typeof value === "number" && isFinite(value) && !isNaN(value) && value > 0;
+}
+
 export default function ColoradoPhase2Breakdown({
   result,
   groupName,
+  resolvedRate,
 }: ColoradoPhase2BreakdownProps) {
   const [authorityExpanded, setAuthorityExpanded] = useState(false);
 
@@ -84,22 +94,29 @@ export default function ColoradoPhase2Breakdown({
     return null;
   }
 
-  const hasEcoModulation = result.pro_modulation_percent !== 0;
-  const hasCdpheBonus = result.cdphe_bonus_percent > 0;
-  const hasInKindCredit = result.newspaper_credit > 0;
+  // SINGLE SOURCE OF TRUTH: resolvedRate is the ONLY rate authority
+  // Calculation response rate (result.base_rate_per_lb) is intentionally ignored
+  // to prevent inconsistency between groups API and calculation API
+  const displayRate = resolvedRate;
+  const hasValidRate = displayRate !== null && isValidRate(displayRate);
 
-  // Compute dollar deltas from API response values
-  // Layer 1: PRO Eco-Modulation applies to Base Dues (reduction)
-  const proModulationDelta = result.base_dues * result.pro_modulation_percent;
-  const afterProModulation = result.base_dues - proModulationDelta;
+  // SINGLE SOURCE OF TRUTH: Use shared utility for all derived values
+  // This ensures PDF export uses identical values as displayed in UI
+  const derived = computeColoradoPhase2DerivedValues(result);
+  const {
+    proModulationDelta,
+    afterProModulation,
+    cdpheBonusDelta,
+    afterCdpheBonus,
+    finalPayable,
+    proModulationPercent,
+    cdpheBonusPercent,
+    inKindCredit,
+  } = derived;
 
-  // Layer 2: CDPHE Bonus applies to Base Dues (reduction, capped at 10%)
-  const cdpheBonusDelta = result.base_dues * result.cdphe_bonus_percent;
-  const afterCdpheBonus = afterProModulation - cdpheBonusDelta;
-
-  // Final: In-Kind Credit (final deduction, floor at $0)
-  const beforeFloor = afterCdpheBonus - result.newspaper_credit;
-  const finalPayable = Math.max(0, beforeFloor);
+  const hasEcoModulation = proModulationPercent !== 0;
+  const hasCdpheBonus = cdpheBonusPercent > 0;
+  const hasInKindCredit = inKindCredit > 0;
 
   return (
     <div className="fee-breakdown fee-breakdown--has-result">
@@ -115,15 +132,27 @@ export default function ColoradoPhase2Breakdown({
         </div>
       </div>
 
+      {/* Warning banner when rate is missing/invalid */}
+      {!hasValidRate && (
+        <div className="fee-warning" role="alert">
+          <strong>Rate Not Yet Published</strong>
+          <p>
+            This material group does not yet have a published Colorado rate
+            under the 2026 Program Plan. Please consult the PRO for current
+            rate information.
+          </p>
+        </div>
+      )}
+
       {/* Detailed Breakdown */}
       <div className="fee-explanation">
         <div className="fee-explanation-title">Fee Breakdown</div>
         <table className="fee-table">
           <tbody>
-            {/* Base Rate - Medium Scenario */}
+            {/* Base Rate - Medium Scenario (uses displayRate for single source of truth) */}
             <tr className="fee-row">
               <td className="fee-row-label">JBC-Approved Medium Scenario Rate</td>
-              <td className="fee-row-value">{formatRate(result.base_rate_per_lb)}/lb</td>
+              <td className="fee-row-value">{formatRate(displayRate)}/lb</td>
             </tr>
 
             {/* Weight */}
@@ -149,7 +178,7 @@ export default function ColoradoPhase2Breakdown({
             <tr className={`fee-row ${hasEcoModulation ? "fee-row-credit" : "fee-row-zero"}`}>
               <td className="fee-row-label">
                 {hasEcoModulation
-                  ? `PRO Eco-Modulation (${formatPercent(result.pro_modulation_percent)})`
+                  ? `PRO Eco-Modulation (${formatPercent(proModulationPercent)})`
                   : "PRO Eco-Modulation"}
               </td>
               <td className="fee-row-value">
@@ -174,7 +203,7 @@ export default function ColoradoPhase2Breakdown({
             <tr className={`fee-row ${hasCdpheBonus ? "fee-row-credit" : "fee-row-zero"}`}>
               <td className="fee-row-label">
                 {hasCdpheBonus
-                  ? `CDPHE Bonus (${formatPercent(result.cdphe_bonus_percent)})`
+                  ? `CDPHE Bonus (${formatPercent(cdpheBonusPercent)})`
                   : "CDPHE Bonus"}
               </td>
               <td className="fee-row-value">
@@ -192,7 +221,7 @@ export default function ColoradoPhase2Breakdown({
             {hasInKindCredit && (
               <tr className="fee-row fee-row-credit">
                 <td className="fee-row-label">In-Kind Advertising Credit Applied</td>
-                <td className="fee-row-value">-{formatCurrency(result.newspaper_credit)}</td>
+                <td className="fee-row-value">-{formatCurrency(inKindCredit)}</td>
               </tr>
             )}
 

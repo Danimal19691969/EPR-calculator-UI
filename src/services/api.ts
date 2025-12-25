@@ -236,10 +236,105 @@ export async function calculateEPR(
 // ============================================
 
 /**
+ * Normalize Colorado Phase 2 groups from various API response shapes.
+ *
+ * WHY THIS EXISTS:
+ * The Colorado Phase 2 API response shape is not guaranteed to be stable.
+ * Production has returned responses with camelCase keys (groupKey, groupName)
+ * and string rate values ("0.0134" instead of 0.0134). Without normalization,
+ * the resolver fails to find groups, causing false "rate unavailable" errors.
+ *
+ * DESIGN:
+ * - Normalization occurs ONCE at the fetch boundary (here)
+ * - Resolver and UI depend on deterministic ColoradoPhase2Group shape
+ * - All downstream code assumes snake_case keys and numeric rates
+ *
+ * This handles:
+ * - Wrapped response: { groups: [...] } or { data: [...] }
+ * - Raw array response: [...]
+ * - CamelCase keys: groupKey, groupName, baseRatePerLb
+ * - Snake_case keys: group_key, group_name, base_rate_per_lb
+ * - String rate values: "0.0134" → 0.0134
+ *
+ * SINGLE SOURCE OF TRUTH: All Phase 2 groups must go through this normalizer.
+ */
+export function normalizeColoradoPhase2Groups(raw: unknown): ColoradoPhase2Group[] {
+  // Handle wrapped responses
+  let items: unknown[];
+
+  if (Array.isArray(raw)) {
+    items = raw;
+  } else if (raw && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    // Check common wrapper keys
+    if (Array.isArray(obj.groups)) {
+      items = obj.groups;
+    } else if (Array.isArray(obj.data)) {
+      items = obj.data;
+    } else if (Array.isArray(obj.items)) {
+      items = obj.items;
+    } else {
+      console.error("[normalizeColoradoPhase2Groups] Unknown response shape:", raw);
+      return [];
+    }
+  } else {
+    console.error("[normalizeColoradoPhase2Groups] Response is not an object or array:", raw);
+    return [];
+  }
+
+  const normalized: ColoradoPhase2Group[] = [];
+
+  for (const item of items) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+
+    const obj = item as Record<string, unknown>;
+
+    // Extract group_key (snake_case or camelCase)
+    const groupKey = (obj.group_key ?? obj.groupKey) as string | undefined;
+    if (!groupKey || typeof groupKey !== "string") {
+      console.warn("[normalizeColoradoPhase2Groups] Skipping item without group_key:", obj);
+      continue;
+    }
+
+    // Extract group_name (snake_case or camelCase)
+    const groupName = (obj.group_name ?? obj.groupName) as string | undefined;
+    if (!groupName || typeof groupName !== "string") {
+      console.warn("[normalizeColoradoPhase2Groups] Skipping item without group_name:", obj);
+      continue;
+    }
+
+    // Extract rate (multiple possible keys)
+    const rawRate = obj.base_rate_per_lb ?? obj.baseRatePerLb ?? obj.rate ?? obj.base_rate;
+    const rate = typeof rawRate === "string" ? parseFloat(rawRate) : Number(rawRate);
+
+    // Skip if rate is invalid (NaN or not a number)
+    if (typeof rate !== "number" || isNaN(rate)) {
+      console.warn("[normalizeColoradoPhase2Groups] Skipping item with invalid rate:", obj);
+      continue;
+    }
+
+    // Extract status (optional)
+    const status = (obj.status as string) ?? "MRL";
+
+    normalized.push({
+      group_key: groupKey,
+      group_name: groupName,
+      status,
+      base_rate_per_lb: rate,
+    });
+  }
+
+  return normalized;
+}
+
+/**
  * Fetch Colorado Phase 2 aggregated groups.
  * Used when user selects Colorado + Phase 2 mode.
  *
- * NOTE: Backend returns a raw array, NOT a wrapped object.
+ * IMPORTANT: Response is normalized to ensure consistent shape regardless of
+ * backend format (wrapped, camelCase, string rates, etc.).
  */
 export async function fetchColoradoPhase2Groups(): Promise<ColoradoPhase2Group[]> {
   const res = await fetch(`${API_BASE_URL}/materials/colorado/phase2/groups`);
@@ -251,17 +346,15 @@ export async function fetchColoradoPhase2Groups(): Promise<ColoradoPhase2Group[]
 
   const json = await res.json();
 
-  // Strict runtime guard: response must be an array
-  if (!Array.isArray(json)) {
-    throw new Error("Phase 2 groups response is not an array");
+  // CRITICAL: Normalize the response to handle any API shape variations
+  const normalized = normalizeColoradoPhase2Groups(json);
+
+  // Treat empty result as error - no groups means nothing to display
+  if (normalized.length === 0) {
+    throw new Error("No Phase 2 material groups available (after normalization)");
   }
 
-  // Treat empty array as error - no groups means nothing to display
-  if (json.length === 0) {
-    throw new Error("No Phase 2 material groups available");
-  }
-
-  return json;
+  return normalized;
 }
 
 /**

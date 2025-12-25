@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   calculateEPR,
   fetchMaterials,
@@ -14,8 +14,9 @@ import type {
   ColoradoPhase2CalculateResponse,
 } from "./services/api";
 import { getStateRules } from "./config/stateRules";
-import { getProgramRules } from "./config/programRules";
+import { getProgramRules, OREGON_OPERATIONAL_PORTION } from "./config/programRules";
 import type { LCAOptionType } from "./config/programRules";
+import { getStateLegal } from "./config/stateLegal";
 import FeeBreakdown from "./components/FeeBreakdown";
 import FeeExplanation from "./components/FeeExplanation";
 import Disclaimer from "./components/Disclaimer";
@@ -24,12 +25,29 @@ import LcaSelector from "./components/LcaSelector";
 import ColoradoPhaseSelector, { SHOW_CURRENT_PROGRAM } from "./components/ColoradoPhaseSelector";
 import type { ColoradoPhase } from "./components/ColoradoPhaseSelector";
 import ColoradoPhase2Breakdown from "./components/ColoradoPhase2Breakdown";
+import ColoradoPhase2FeeExplanation from "./components/ColoradoPhase2FeeExplanation";
+import { generateColoradoPhase2Explanation } from "./utils/coloradoPhase2Explanation";
+import { computeColoradoPhase2DerivedValues } from "./utils/coloradoPhase2DerivedValues";
 import CdphePerformanceSelector, { cdpheCriteriaToPercent } from "./components/CdphePerformanceSelector";
 import type { CdpheCriteria } from "./components/CdphePerformanceSelector";
 import EcoModulationSelector, { ecoModulationTierToPercent } from "./components/EcoModulationSelector";
 import type { EcoModulationTier } from "./components/EcoModulationSelector";
 import InKindAdvertisingCredit, { isInKindEligible } from "./components/InKindAdvertisingCredit";
 import OregonLcaExplanation from "./components/OregonLcaExplanation";
+import DeltaTimeline from "./components/DeltaTimeline";
+import type { TimelineStep } from "./components/DeltaTimeline";
+import PrintableResultsLayout from "./components/PrintableResultsLayout";
+import type { BreakdownRow } from "./components/PrintableResultsLayout";
+import PrintableResultsLayoutV2 from "./components/PrintableResultsLayoutV2";
+import { buildColoradoPhase2Snapshot } from "./pdf/buildColoradoPhase2Snapshot";
+import type { PdfSnapshot } from "./pdf/PdfSnapshot";
+import { generatePDFFilename, exportElementToPDF, formatCurrencyForPDF, formatRateForPDF } from "./utils/exportResultsToPDF";
+import {
+  resolveColoradoRateSafe,
+  hasValidColoradoRate,
+  logColoradoRateDiagnostics,
+} from "./utils/coloradoRateResolver";
+import { Download } from "lucide-react";
 import "./App.css";
 
 // Default phase based on feature flag
@@ -84,6 +102,11 @@ export default function App() {
   const [materialsError, setMaterialsError] = useState<string | null>(null);
   // Explicit Phase 2 loading state for UX guardrails
   const [phase2GroupsLoading, setPhase2GroupsLoading] = useState(false);
+  // Delta Timeline toggle state (hidden by default)
+  const [showTimeline, setShowTimeline] = useState(false);
+  // PDF export state
+  const [isExporting, setIsExporting] = useState(false);
+  const printableLayoutRef = useRef<HTMLDivElement>(null);
 
   // Derived values
   const stateRules = getStateRules(state);
@@ -99,10 +122,56 @@ export default function App() {
   );
 
   // Phase 2 readiness guard - Estimate button disabled until data is valid
+  // CRITICAL: Also checks that the selected group has a valid rate
+  // CRITICAL: Must NOT enable during loading - rate validation is meaningless then
   const canEstimatePhase2 =
+    !phase2GroupsLoading &&
     safePhase2Groups.length > 0 &&
     !!selectedPhase2Group &&
-    weight > 0;
+    weight > 0 &&
+    hasValidColoradoRate(safePhase2Groups, selectedPhase2Group);
+
+  // Resolve the rate for the selected group (null if invalid)
+  const selectedGroupRate = useMemo(
+    () => resolveColoradoRateSafe(safePhase2Groups, selectedPhase2Group),
+    [safePhase2Groups, selectedPhase2Group]
+  );
+
+  // SINGLE SOURCE OF TRUTH: Compute derived values for Colorado Phase 2
+  // Both UI and PDF MUST use these values to ensure parity
+  const phase2DerivedValues = useMemo(
+    () => (phase2Result ? computeColoradoPhase2DerivedValues(phase2Result) : null),
+    [phase2Result]
+  );
+
+  // SINGLE SOURCE OF TRUTH: Build PDF snapshot for Colorado Phase 2
+  // This snapshot captures EXACTLY what the UI displays - no recomputation in PDF
+  const coloradoPhase2Snapshot: PdfSnapshot | null = useMemo(() => {
+    if (!isColoradoPhase2 || !phase2Result) return null;
+    const group = safePhase2Groups.find((g) => g.group_key === selectedPhase2Group);
+    const groupName = group?.group_name || phase2Result.aggregated_group;
+    return buildColoradoPhase2Snapshot({
+      result: phase2Result,
+      resolvedRate: selectedGroupRate,
+      groupName,
+    });
+  }, [isColoradoPhase2, phase2Result, safePhase2Groups, selectedPhase2Group, selectedGroupRate]);
+
+  // Flag to indicate rate resolution failed for selected group
+  // CRITICAL: Only validate rates AFTER groups have finished loading
+  // During loading, resolver returns null but that's expected (not an error)
+  const hasRateError =
+    isColoradoPhase2 &&
+    !phase2GroupsLoading &&
+    selectedPhase2Group &&
+    selectedGroupRate === null;
+
+  // DERIVED Colorado rate error message (SINGLE SOURCE OF TRUTH)
+  // This is NOT stored in state - it's computed fresh on every render
+  // The error disappears automatically when a valid group is selected
+  const coloradoRateError = hasRateError
+    ? "This material group does not yet have a published Colorado rate under the 2026 Program Plan. Please select a different group or consult the PRO."
+    : null;
 
   // In-Kind Advertising Credit is only available for specific material groups
   const showInKindCredit = isColoradoPhase2 && isInKindEligible(selectedPhase2Group);
@@ -225,6 +294,9 @@ export default function App() {
         // Backend returns raw array directly (not wrapped in object)
         const groups = await fetchColoradoPhase2Groups();
         if (!cancelled) {
+          // DEV ONLY: Log diagnostic table to trace rate data flow
+          logColoradoRateDiagnostics(groups, import.meta.env.VITE_API_BASE_URL || "");
+
           setPhase2Groups(groups);
           if (groups.length > 0) {
             setSelectedPhase2Group(groups[0].group_key);
@@ -280,6 +352,13 @@ export default function App() {
       if (weight <= 0) {
         setError("Weight must be greater than 0");
         return;
+      }
+      // CRITICAL: Validate rate before calculation
+      // Only validate after groups are loaded - during loading, validation is meaningless
+      // NOTE: Do NOT call setError() here - Colorado rate errors are DERIVED, not stored
+      // The coloradoRateError derived value handles displaying the error message
+      if (!phase2GroupsLoading && !hasValidColoradoRate(safePhase2Groups, selectedPhase2Group)) {
+        return; // Block calculation, but error is shown via derived coloradoRateError
       }
 
       try {
@@ -349,6 +428,296 @@ export default function App() {
       setError(err.message);
     }
   }
+
+  /**
+   * Build PDF export data and trigger download.
+   */
+  const handleExportPDF = useCallback(async () => {
+    if (!printableLayoutRef.current) return;
+
+    setIsExporting(true);
+
+    try {
+      // Determine material name for filename
+      let materialName = "";
+      if (isColoradoPhase2 && selectedPhase2Group) {
+        const group = safePhase2Groups.find((g) => g.group_key === selectedPhase2Group);
+        materialName = group?.group_name || selectedPhase2Group;
+      } else if (isOregon && selectedCategory) {
+        materialName = selectedCategory.category_name;
+      } else if (selectedMaterial) {
+        materialName = selectedMaterial.material_name;
+      }
+
+      const filename = generatePDFFilename(state, materialName);
+
+      // Small delay to ensure the hidden layout is fully rendered
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      await exportElementToPDF(printableLayoutRef.current, filename);
+    } catch (err) {
+      console.error("PDF export failed:", err);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [
+    state,
+    isColoradoPhase2,
+    isOregon,
+    selectedPhase2Group,
+    safePhase2Groups,
+    selectedCategory,
+    selectedMaterial,
+  ]);
+
+  /**
+   * Build breakdown rows for PDF export based on current state and result.
+   *
+   * CRITICAL: For Colorado Phase 2, uses phase2DerivedValues (memoized) as the
+   * SINGLE SOURCE OF TRUTH for all derived values. This ensures the PDF
+   * displays identical values to the UI (ColoradoPhase2Breakdown component).
+   */
+  const buildBreakdownRows = useCallback((): BreakdownRow[] => {
+    const rows: BreakdownRow[] = [];
+
+    if (isColoradoPhase2 && phase2DerivedValues) {
+      // SINGLE SOURCE OF TRUTH: Use memoized derived values
+      // This guarantees PDF values match UI values exactly
+      const derived = phase2DerivedValues;
+
+      const group = safePhase2Groups.find((g) => g.group_key === selectedPhase2Group);
+      const groupName = group?.group_name || "Material Group";
+
+      rows.push({
+        label: "Material Group",
+        value: groupName,
+        type: "header",
+      });
+      // SINGLE SOURCE OF TRUTH: Use resolved rate from groups API only
+      // Calculation response rate is intentionally ignored - resolver is the only authority
+      rows.push({
+        label: `Rate (per lb)`,
+        value: formatRateForPDF(selectedGroupRate),
+        type: "normal",
+      });
+      rows.push({
+        label: `Weight`,
+        value: `${derived.weightLbs} lbs`,
+        type: "normal",
+      });
+      rows.push({
+        label: "Base Dues",
+        value: formatCurrencyForPDF(derived.baseDues),
+        type: "subtotal",
+      });
+
+      if (derived.proModulationPercent > 0) {
+        rows.push({
+          label: `PRO Eco-Modulation (${(derived.proModulationPercent * 100).toFixed(0)}%)`,
+          value: `-${formatCurrencyForPDF(derived.proModulationDelta)}`,
+          type: "credit",
+        });
+      }
+
+      if (derived.cdpheBonusPercent > 0) {
+        rows.push({
+          label: `CDPHE Performance Bonus (${(derived.cdpheBonusPercent * 100).toFixed(0)}%)`,
+          value: `-${formatCurrencyForPDF(derived.cdpheBonusDelta)}`,
+          type: "credit",
+        });
+      }
+
+      if (derived.inKindCredit > 0) {
+        rows.push({
+          label: "In-Kind Advertising Credit",
+          value: `-${formatCurrencyForPDF(derived.inKindCredit)}`,
+          type: "credit",
+        });
+      }
+
+      rows.push({
+        label: "Final Payable",
+        value: formatCurrencyForPDF(derived.finalPayable),
+        type: "total",
+      });
+    } else if (result) {
+      // Oregon or Colorado Phase 1
+      const materialLabel = isOregon
+        ? selectedCategory?.category_name || "Material"
+        : selectedMaterial?.material_name || "Material";
+      const baseRate = isOregon
+        ? selectedOregonSubcategory?.rate || 0
+        : selectedMaterial?.net_effective_rate_lbs || 0;
+
+      rows.push({
+        label: "Material",
+        value: materialLabel,
+        type: "header",
+      });
+
+      if (isOregon && selectedOregonSubcategory) {
+        rows.push({
+          label: "Subcategory",
+          value: selectedOregonSubcategory.display_name,
+          type: "normal",
+        });
+      }
+
+      rows.push({
+        label: "Rate (per lb)",
+        value: formatRateForPDF(baseRate),
+        type: "normal",
+      });
+      rows.push({
+        label: "Weight",
+        value: `${result.weight_lbs} lbs`,
+        type: "normal",
+      });
+      rows.push({
+        label: "Initial Fee",
+        value: formatCurrencyForPDF(result.initial_fee),
+        type: "subtotal",
+      });
+
+      if (result.lca_bonus.amount > 0) {
+        rows.push({
+          label: `LCA Bonus (${result.lca_bonus.type})`,
+          value: `-${formatCurrencyForPDF(result.lca_bonus.amount)}`,
+          type: "credit",
+        });
+      }
+
+      rows.push({
+        label: "Total Fee",
+        value: formatCurrencyForPDF(result.total_fee),
+        type: "total",
+      });
+    }
+
+    return rows;
+  }, [
+    isColoradoPhase2,
+    isOregon,
+    phase2DerivedValues,
+    result,
+    safePhase2Groups,
+    selectedPhase2Group,
+    selectedGroupRate,
+    selectedCategory,
+    selectedMaterial,
+    selectedOregonSubcategory,
+  ]);
+
+  /**
+   * Build explanation paragraphs for PDF export.
+   *
+   * COLORADO PHASE 2: Uses generateColoradoPhase2Explanation() as SINGLE SOURCE OF TRUTH.
+   * This ensures PDF and UI display identical explanation text.
+   */
+  const buildExplanationParagraphs = useCallback((): string[] => {
+    const stateLegal = getStateLegal(state);
+
+    // Colorado Phase 2: Use shared explanation generator (single source of truth)
+    if (isColoradoPhase2 && phase2Result) {
+      const group = safePhase2Groups.find((g) => g.group_key === selectedPhase2Group);
+      const groupName = group?.group_name || "the selected material group";
+
+      return generateColoradoPhase2Explanation({
+        groupName,
+        result: phase2Result,
+        resolvedRate: selectedGroupRate,
+      });
+    }
+
+    // Oregon and other states: build explanation paragraphs here
+    const paragraphs: string[] = [];
+    if (result) {
+      const materialLabel = isOregon
+        ? selectedCategory?.category_name || "the selected material"
+        : selectedMaterial?.material_name || "the selected material";
+      const baseRate = isOregon
+        ? selectedOregonSubcategory?.rate || 0
+        : selectedMaterial?.net_effective_rate_lbs || 0;
+
+      paragraphs.push(
+        `This estimate is calculated for ${materialLabel} under the ${stateLegal.lawName} (${stateLegal.statuteReference}).`
+      );
+
+      paragraphs.push(
+        `The initial fee of ${formatCurrencyForPDF(result.initial_fee)} is calculated by multiplying the weight (${result.weight_lbs} lbs) by the per-pound rate (${formatRateForPDF(baseRate)}).`
+      );
+
+      if (isOregon && result.lca_bonus.amount > 0) {
+        const bonusPercent = result.lca_bonus.type === "bonus_a" ? "5%" : "variable";
+        paragraphs.push(
+          `An LCA bonus of ${formatCurrencyForPDF(result.lca_bonus.amount)} (${bonusPercent} reduction) has been applied based on the selected lifecycle assessment status. ${OREGON_OPERATIONAL_PORTION} of the fee represents operational costs not subject to LCA adjustments.`
+        );
+      }
+    }
+
+    return paragraphs;
+  }, [
+    state,
+    isColoradoPhase2,
+    isOregon,
+    phase2Result,
+    result,
+    safePhase2Groups,
+    selectedPhase2Group,
+    selectedCategory,
+    selectedMaterial,
+    selectedOregonSubcategory,
+  ]);
+
+  /**
+   * Build timeline steps for PDF export.
+   *
+   * CRITICAL: For Colorado Phase 2, uses phase2DerivedValues as the SINGLE
+   * SOURCE OF TRUTH for all delta values. This ensures PDF timeline matches UI.
+   */
+  const buildTimelineSteps = useCallback((): TimelineStep[] => {
+    const steps: TimelineStep[] = [];
+
+    if (isColoradoPhase2 && phase2DerivedValues) {
+      // Use derived values for consistency with UI
+      const { proModulationDelta, cdpheBonusDelta, inKindCredit, proModulationPercent, cdpheBonusPercent } = phase2DerivedValues;
+
+      if (proModulationPercent > 0) {
+        steps.push({
+          label: "Eco-Mod",
+          delta: -proModulationDelta,
+          sublabel: "PRO Eco-Modulation",
+        });
+      }
+
+      if (cdpheBonusPercent > 0) {
+        steps.push({
+          label: "CDPHE",
+          delta: -cdpheBonusDelta,
+          sublabel: "CDPHE Performance Benchmarks",
+        });
+      }
+
+      if (inKindCredit > 0) {
+        steps.push({
+          label: "In-Kind",
+          delta: -inKindCredit,
+          sublabel: "In-Kind Advertising Credit",
+        });
+      }
+    } else if (isOregon && result && result.lca_bonus.amount > 0) {
+      steps.push({
+        label: "LCA Bonus",
+        delta: -result.lca_bonus.amount,
+        sublabel: lcaSelection === "bonusB" ? "Bonus B" : "Bonus A",
+      });
+    }
+
+    return steps;
+  }, [isColoradoPhase2, isOregon, phase2DerivedValues, result, lcaSelection]);
+
+  // Determine if we have exportable results
+  const hasExportableResults = (isColoradoPhase2 && phase2Result) || (!isColoradoPhase2 && result);
 
   return (
     <div className="calculator-shell">
@@ -446,17 +815,25 @@ export default function App() {
               ) : safePhase2Groups.length === 0 ? (
                 <div className="form-status">Loading Colorado Phase 2 material groups…</div>
               ) : (
-                <select
-                  id="phase2-group-select"
-                  value={selectedPhase2Group}
-                  onChange={(e) => setSelectedPhase2Group(e.target.value)}
-                >
-                  {safePhase2Groups.map((g) => (
-                    <option key={g.group_key} value={g.group_key}>
-                      {g.group_name}
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <select
+                    id="phase2-group-select"
+                    value={selectedPhase2Group}
+                    onChange={(e) => setSelectedPhase2Group(e.target.value)}
+                  >
+                    {safePhase2Groups.map((g) => (
+                      <option key={g.group_key} value={g.group_key}>
+                        {g.group_name}
+                      </option>
+                    ))}
+                  </select>
+                  {/* Warning when selected group has invalid rate - uses DERIVED error, not state */}
+                  {coloradoRateError && (
+                    <div className="form-error" role="alert">
+                      {coloradoRateError}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -606,14 +983,103 @@ export default function App() {
 
         {/* Colorado Phase 2 uses its own breakdown component */}
         {isColoradoPhase2 ? (
-          <ColoradoPhase2Breakdown
-            result={phase2Result}
-            groupName={
-              safePhase2Groups.length > 0 && selectedPhase2Group
-                ? safePhase2Groups.find((g) => g.group_key === selectedPhase2Group)?.group_name
-                : undefined
-            }
-          />
+          <>
+            <ColoradoPhase2Breakdown
+              result={phase2Result}
+              groupName={
+                safePhase2Groups.length > 0 && selectedPhase2Group
+                  ? safePhase2Groups.find((g) => g.group_key === selectedPhase2Group)?.group_name
+                  : undefined
+              }
+              resolvedRate={selectedGroupRate}
+            />
+
+            {/* Colorado Phase 2 Fee Explanation - uses same text as PDF */}
+            {phase2Result && (
+              <ColoradoPhase2FeeExplanation
+                result={phase2Result}
+                groupName={
+                  safePhase2Groups.find((g) => g.group_key === selectedPhase2Group)?.group_name ||
+                  "the selected material group"
+                }
+                resolvedRate={selectedGroupRate}
+              />
+            )}
+
+            {/* Colorado Phase 2 Delta Timeline Toggle and Visualization */}
+            {phase2Result && (() => {
+              /**
+               * CRITICAL: Use SAME derived values as Fee Breakdown and PDF.
+               * This ensures the timeline displays identical values.
+               *
+               * The timeline is RENDER-ONLY - it does NOT compute any values.
+               * All values come from computeColoradoPhase2DerivedValues().
+               */
+              const derived = computeColoradoPhase2DerivedValues(phase2Result);
+              const {
+                baseDues,
+                proModulationDelta,
+                cdpheBonusDelta,
+                inKindCredit,
+                finalPayable,
+              } = derived;
+
+              const timelineSteps: TimelineStep[] = [];
+
+              // Only add steps that have non-zero deltas
+              // Use canonical delta values from derived values (same as Fee Breakdown)
+              if (proModulationDelta !== 0) {
+                timelineSteps.push({
+                  label: "Eco-Mod",
+                  delta: -proModulationDelta,
+                  sublabel: "Layer 1: PRO Eco-Modulation",
+                });
+              }
+
+              if (cdpheBonusDelta !== 0) {
+                timelineSteps.push({
+                  label: "CDPHE",
+                  delta: -cdpheBonusDelta,
+                  sublabel: "Layer 2: CDPHE Performance Benchmarks",
+                });
+              }
+
+              if (inKindCredit !== 0) {
+                timelineSteps.push({
+                  label: "In-Kind",
+                  delta: -inKindCredit,
+                  sublabel: "Publisher In-Kind Advertising Credit",
+                });
+              }
+
+              // Only show timeline toggle if there are adjustments to visualize
+              if (timelineSteps.length === 0) {
+                return null;
+              }
+
+              return (
+                <>
+                  <button
+                    type="button"
+                    className="timeline-toggle-btn"
+                    onClick={() => setShowTimeline(!showTimeline)}
+                    aria-expanded={showTimeline}
+                  >
+                    {showTimeline ? "Hide Fee Adjustment Timeline" : "Show Fee Adjustment Timeline"}
+                  </button>
+
+                  {showTimeline && (
+                    <DeltaTimeline
+                      startValue={baseDues}
+                      steps={timelineSteps}
+                      finalValue={finalPayable}
+                      currency="$"
+                    />
+                  )}
+                </>
+              );
+            })()}
+          </>
         ) : (
           <>
             <FeeBreakdown
@@ -637,9 +1103,96 @@ export default function App() {
                 stateRules={stateRules}
               />
             )}
+
+            {/* Oregon Delta Timeline Toggle and Visualization */}
+            {isOregon && result && result.lca_bonus.amount !== 0 && (() => {
+              const initialFee = result.initial_fee || 0;
+              const lcaBonusAmount = result.lca_bonus.amount || 0;
+
+              const timelineSteps: TimelineStep[] = [
+                {
+                  label: "LCA Bonus",
+                  delta: -lcaBonusAmount,
+                  sublabel: lcaSelection === "bonusB" ? "Bonus B (Impact Reduction)" : "Bonus A (Disclosure)",
+                },
+              ];
+
+              return (
+                <>
+                  <button
+                    type="button"
+                    className="timeline-toggle-btn"
+                    onClick={() => setShowTimeline(!showTimeline)}
+                    aria-expanded={showTimeline}
+                  >
+                    {showTimeline ? "Hide Fee Adjustment Timeline" : "Show Fee Adjustment Timeline"}
+                  </button>
+
+                  {showTimeline && (
+                    <DeltaTimeline
+                      startValue={initialFee}
+                      steps={timelineSteps}
+                      finalValue={result.total_fee}
+                      currency="$"
+                    />
+                  )}
+                </>
+              );
+            })()}
           </>
         )}
+
+        {/* PDF Export Button - shown when results are available */}
+        {hasExportableResults && (
+          <button
+            type="button"
+            className="pdf-export-btn"
+            onClick={handleExportPDF}
+            disabled={isExporting}
+          >
+            <Download size={16} />
+            {isExporting ? "Generating PDF..." : "Download Fee Summary (PDF)"}
+          </button>
+        )}
       </div>
+
+      {/* Hidden Printable Layout for PDF Export */}
+      {/* Colorado Phase 2: Use snapshot-based V2 component for guaranteed UI/PDF parity */}
+      {isColoradoPhase2 && coloradoPhase2Snapshot && (
+        <PrintableResultsLayoutV2
+          ref={printableLayoutRef}
+          snapshot={coloradoPhase2Snapshot}
+        />
+      )}
+      {/* Oregon/Other: Use legacy component (Oregon is not being refactored) */}
+      {!isColoradoPhase2 && hasExportableResults && (
+        <PrintableResultsLayout
+          ref={printableLayoutRef}
+          state={state}
+          programName={getStateLegal(state).lawName}
+          materialCategory={
+            isOregon
+              ? selectedCategory?.category_name || ""
+              : selectedMaterial?.material_name || ""
+          }
+          subcategory={
+            isOregon ? selectedOregonSubcategory?.display_name : undefined
+          }
+          weightLbs={result?.weight_lbs || weight}
+          dateGenerated={new Date().toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
+          finalPayable={result?.total_fee || 0}
+          baseDues={result?.initial_fee || 0}
+          timelineSteps={buildTimelineSteps()}
+          breakdownRows={buildBreakdownRows()}
+          explanationParagraphs={buildExplanationParagraphs()}
+          authorityText={`This estimate is calculated under the ${getStateLegal(state).lawName}.`}
+          lawReference={getStateLegal(state).statuteReference}
+        />
+      )}
 
       <Footer state={state} />
     </div>

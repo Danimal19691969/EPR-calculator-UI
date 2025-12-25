@@ -309,6 +309,30 @@
   color: #484f58;
 }
 
+/* Warning banner for invalid/missing data */
+.fee-warning {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  background-color: rgba(210, 153, 34, 0.15);
+  border: 1px solid rgba(210, 153, 34, 0.4);
+  border-radius: 6px;
+  color: #d29922;
+  font-size: 0.8125rem;
+}
+
+.fee-warning strong {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: #e3b341;
+}
+
+.fee-warning p {
+  margin: 0;
+  line-height: 1.4;
+  color: #c9a227;
+}
+
 /* ============================================
    FEE EXPLANATION SECTION
    ============================================ */
@@ -1645,5 +1669,538 @@
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: #58a6ff;
+}
+
+/* ============================================
+   DELTA TIMELINE
+   Horizontal timeline visualization for fee adjustments
+   ============================================ */
+
+/* Toggle button for showing/hiding the timeline */
+.timeline-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+  margin: 1rem auto 0;
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px solid rgba(0, 245, 255, 0.4);
+  border-radius: 10px;
+  color: rgba(0, 245, 255, 0.9);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.15);
+}
+
+.timeline-toggle-btn:hover {
+  background: rgba(0, 245, 255, 0.08);
+  border-color: rgba(0, 245, 255, 0.6);
+  box-shadow: 0 0 20px rgba(0, 245, 255, 0.25);
+}
+
+.timeline-toggle-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 245, 255, 0.3), 0 0 20px rgba(0, 245, 255, 0.25);
+}
+
+.timeline-toggle-btn[aria-expanded="true"] {
+  background: rgba(0, 245, 255, 0.1);
+  border-color: rgba(0, 245, 255, 0.5);
+}
+
+/* Timeline container */
+.delta-timeline {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin: 0.75rem auto 0;
+  border-radius: 20px;
+}
+
+.delta-timeline__chrome {
+  position: absolute;
+  inset: -1px;
+  border-radius: 22px;
+  background: radial-gradient(120% 120% at 10% 10%, rgba(0, 245, 255, 0.35), transparent 55%),
+              radial-gradient(120% 120% at 90% 25%, rgba(255, 77, 255, 0.30), transparent 55%),
+              linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02));
+  filter: blur(0.2px);
+  pointer-events: none;
+}
+
+.delta-timeline__inner {
+  position: relative;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow:
+    0 18px 50px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.delta-timeline__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 6px 16px;
+}
+
+.delta-timeline__title {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: rgba(205, 231, 255, 0.85);
+  text-transform: uppercase;
+}
+
+.delta-timeline__readout {
+  text-align: right;
+}
+
+.delta-timeline__readoutLabel {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: rgba(205, 231, 255, 0.65);
+}
+
+.delta-timeline__readoutValue {
+  font-size: 17px;
+  font-weight: 700;
+  color: rgba(0, 255, 154, 0.95);
+  text-shadow: 0 0 14px rgba(0, 255, 154, 0.18);
+}
+
+.delta-timeline__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.delta-timeline__footer {
+  padding: 6px 16px 12px 16px;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: rgba(205, 231, 255, 0.55);
+}
+
+/* ============================================
+   PDF EXPORT BUTTON
+   ============================================ */
+.pdf-export-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+  margin: 1rem auto 0;
+  padding: 12px 20px;
+  background: transparent;
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  border-radius: 10px;
+  color: rgba(88, 166, 255, 0.95);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 12px rgba(88, 166, 255, 0.1);
+}
+
+.pdf-export-btn:hover:not(:disabled) {
+  background: rgba(88, 166, 255, 0.08);
+  border-color: rgba(88, 166, 255, 0.6);
+  box-shadow: 0 0 20px rgba(88, 166, 255, 0.2);
+}
+
+.pdf-export-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.3), 0 0 20px rgba(88, 166, 255, 0.2);
+}
+
+.pdf-export-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pdf-export-btn--loading {
+  color: rgba(88, 166, 255, 0.7);
+}
+
+/* ============================================
+   PRINTABLE PDF LAYOUT (Hidden off-screen)
+   Mirrors UI typography from calculator-shell
+   ============================================ */
+.pdf-layout {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  width: 794px; /* A4 width at 96 DPI */
+  /* Match UI background: calculator-shell gradient */
+  background:
+    linear-gradient(
+      180deg,
+      #2d333b 0%,
+      #22272e 8%,
+      #1c2128 50%,
+      #161b22 100%
+    );
+  /* Match UI font family */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Match UI text color: #c9d1d9 base */
+  color: #c9d1d9;
+  padding: 40px;
+  box-sizing: border-box;
+}
+
+/* Header - matches calculator-header styling */
+.pdf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  /* NO border-bottom - removed horizontal line */
+}
+
+.pdf-header-content {
+  flex: 1;
+}
+
+/* Title matches .calculator-title */
+.pdf-title {
+  font-size: 1.25rem; /* 20px - matches UI */
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  /* Match UI title color */
+  color: #d0d7de;
+  margin: 0;
+  /* Match UI engraved effect */
+  text-shadow:
+    0 1px 0 rgba(110, 118, 129, 0.35),
+    0 -1px 0 rgba(0, 0, 0, 0.6);
+}
+
+/* Metadata section - matches UI form labels */
+.pdf-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background-color: #0d1117;
+  border-radius: 8px;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.pdf-meta-row {
+  display: flex;
+  gap: 8px;
+  font-size: 13px; /* Match UI body text */
+}
+
+.pdf-meta-label {
+  /* Match UI label color: #6e7681 */
+  color: #6e7681;
+  min-width: 80px;
+}
+
+.pdf-meta-value {
+  /* Match UI value color: #c9d1d9 */
+  color: #c9d1d9;
+  font-weight: 500;
+}
+
+.pdf-logo-container {
+  flex-shrink: 0;
+  margin-left: 24px;
+}
+
+.pdf-logo {
+  height: 36px; /* Match UI logo height */
+  width: auto;
+}
+
+/* Fee Summary - matches .fee-display LCD style */
+.pdf-fee-summary {
+  background-color: #0d1117;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 20px;
+  /* Match UI inset shadow */
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.pdf-fee-summary-label {
+  /* Match .fee-display-title */
+  font-size: 0.6875rem; /* 11px */
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6e7681;
+  margin-bottom: 6px;
+}
+
+.pdf-fee-summary-value {
+  /* Match .fee-display-main */
+  font-size: 2rem; /* 32px */
+  font-weight: 400;
+  color: #3fb950; /* UI green */
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.pdf-fee-summary-subtitle {
+  /* Match .fee-display-info */
+  font-size: 0.6875rem; /* 11px */
+  color: #484f58;
+}
+
+/* Section Titles - matches .fee-explanation-title */
+.pdf-section-title {
+  font-size: 0.625rem; /* 10px - matches UI */
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #484f58;
+  margin-bottom: 10px;
+  /* NO border - removed horizontal line */
+}
+
+/* Timeline Section - matches UI styling */
+.pdf-timeline-section {
+  margin-bottom: 20px;
+}
+
+.pdf-timeline-container {
+  background-color: #0d1117;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.pdf-timeline-svg {
+  display: block;
+}
+
+.pdf-timeline-caption {
+  text-align: center;
+  font-size: 0.625rem; /* 10px */
+  color: #484f58;
+  margin-top: 10px;
+  font-style: italic;
+}
+
+/* Breakdown Table - matches .fee-table */
+.pdf-breakdown-section {
+  margin-bottom: 20px;
+}
+
+.pdf-breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  /* Match UI: LCD recess */
+  background-color: #0d1117;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.pdf-breakdown-row {
+  /* NO border - removed horizontal lines */
+}
+
+.pdf-breakdown-row:last-child {
+  /* NO border */
+}
+
+.pdf-breakdown-label {
+  padding: 8px 16px;
+  /* Match .fee-row-label */
+  font-size: 0.8125rem; /* 13px */
+  color: #6e7681;
+  text-align: left;
+}
+
+.pdf-breakdown-value {
+  padding: 8px 16px;
+  /* Match .fee-row-value */
+  font-size: 0.8125rem; /* 13px */
+  color: #c9d1d9;
+  text-align: right;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pdf-breakdown-row--header .pdf-breakdown-label {
+  font-weight: 600;
+  color: #8b949e;
+  font-size: 0.8125rem;
+}
+
+.pdf-breakdown-row--header .pdf-breakdown-value {
+  color: #c9d1d9;
+}
+
+.pdf-breakdown-row--subtotal {
+  /* NO border - removed horizontal line */
+}
+
+.pdf-breakdown-row--subtotal .pdf-breakdown-label,
+.pdf-breakdown-row--subtotal .pdf-breakdown-value {
+  font-weight: 500;
+  padding-top: 10px;
+}
+
+/* Credits match UI green */
+.pdf-breakdown-row--credit .pdf-breakdown-value {
+  color: #3fb950;
+}
+
+.pdf-breakdown-row--total {
+  /* NO border - removed horizontal line */
+}
+
+/* Match .fee-row-total */
+.pdf-breakdown-row--total .pdf-breakdown-label {
+  font-weight: 500;
+  font-size: 0.8125rem;
+  color: #8b949e;
+  padding-top: 10px;
+}
+
+.pdf-breakdown-row--total .pdf-breakdown-value {
+  font-weight: 500;
+  font-size: 0.8125rem;
+  color: #e6edf3;
+  padding-top: 10px;
+}
+
+/* Explanation Section - matches .fee-explanation-section */
+.pdf-explanation-section {
+  margin-bottom: 20px;
+}
+
+.pdf-explanation-content {
+  background-color: #0d1117;
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.pdf-explanation-paragraph {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #c9d1d9;
+  margin: 0 0 10px 0;
+}
+
+.pdf-explanation-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+/* Authority Section - matches UI info styling */
+.pdf-authority-section {
+  margin-bottom: 20px;
+}
+
+.pdf-authority-content {
+  background-color: #0d1117;
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.pdf-authority-text {
+  font-size: 0.625rem; /* 10px */
+  line-height: 1.5;
+  color: #484f58;
+  margin: 0 0 6px 0;
+}
+
+.pdf-law-reference {
+  font-size: 0.625rem; /* 10px */
+  color: #6e7681;
+  margin: 0 0 6px 0;
+}
+
+.pdf-compliance-notice {
+  font-size: 0.625rem; /* 10px */
+  color: #484f58;
+  margin: 0;
+  padding-top: 6px;
+  /* NO border - removed horizontal line */
+}
+
+/* Disclaimer Section - matches .disclaimer-card */
+.pdf-disclaimer-section {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  /* Match UI disclaimer background */
+  background: #121821;
+  border-left: 4px solid #f59e0b;
+  border-radius: 10px;
+}
+
+.pdf-disclaimer-title {
+  /* Match .disclaimer-header */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #fbbf24;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+
+.pdf-disclaimer-text {
+  /* Match .disclaimer-card p */
+  font-size: 13px;
+  line-height: 1.5;
+  color: #d1d5db;
+  margin: 6px 0;
+}
+
+.pdf-disclaimer-text:last-child {
+  margin-bottom: 0;
+}
+
+/* Footer - matches UI styling */
+.pdf-footer {
+  padding-top: 16px;
+  /* NO border - removed horizontal line */
+  text-align: center;
+}
+
+.pdf-footer-text {
+  font-size: 0.625rem; /* 10px */
+  color: #484f58;
 }
 
