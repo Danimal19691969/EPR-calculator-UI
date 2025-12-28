@@ -21,14 +21,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  *   material: string,
  *   weight_lbs: number
  * }
+ *
+ * CRITICAL: All state codes MUST be lowercase in API calls.
+ * The backend API is case-sensitive and will return 404 for uppercase states.
  */
 
-// Mock fetch to capture the payload
+// Mock fetch to capture the payload and URL
 let capturedPayload: Record<string, unknown> | null = null;
+let capturedUrl: string | null = null;
 
 beforeEach(() => {
   capturedPayload = null;
-  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, options?: RequestInit) => {
+  capturedUrl = null;
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string, options?: RequestInit) => {
+    capturedUrl = url;
     if (options?.body) {
       capturedPayload = JSON.parse(options.body as string);
     }
@@ -118,5 +124,97 @@ describe('Oregon payload construction', () => {
       state: 'Colorado',
       weight_lbs: 100,
     })).rejects.toThrow('Colorado requires material');
+  });
+});
+
+/**
+ * State Code Normalization Tests
+ *
+ * CRITICAL BUG FIX: The backend API requires lowercase state codes.
+ * FastAPI routes are case-sensitive, so /materials/Colorado returns 404.
+ * These tests ensure all API calls use lowercase state codes.
+ */
+describe('State code normalization', () => {
+  describe('fetchMaterials URL normalization', () => {
+    it('should use lowercase state in URL for "Colorado"', async () => {
+      const { fetchMaterials } = await import('./api');
+
+      await fetchMaterials('Colorado');
+
+      // URL should end with lowercase /materials/colorado
+      expect(capturedUrl).toContain('/materials/colorado');
+      expect(capturedUrl).not.toContain('Colorado');
+    });
+
+    it('should use lowercase state in URL for "OREGON"', async () => {
+      const { fetchMaterials } = await import('./api');
+
+      await fetchMaterials('OREGON');
+
+      // URL should end with lowercase /materials/oregon
+      expect(capturedUrl).toContain('/materials/oregon');
+      expect(capturedUrl).not.toContain('OREGON');
+    });
+
+    it('should use lowercase state in URL for " Oregon " (with whitespace)', async () => {
+      const { fetchMaterials } = await import('./api');
+
+      await fetchMaterials(' Oregon ');
+
+      // URL should end with lowercase /materials/oregon
+      expect(capturedUrl).toContain('/materials/oregon');
+      expect(capturedUrl).not.toContain('Oregon');
+    });
+
+    it('should use lowercase state in URL for already lowercase "colorado"', async () => {
+      const { fetchMaterials } = await import('./api');
+
+      await fetchMaterials('colorado');
+
+      // URL should end with lowercase /materials/colorado
+      expect(capturedUrl).toContain('/materials/colorado');
+    });
+  });
+
+  describe('calculateEPR payload normalization', () => {
+    it('should send lowercase state in payload for "Colorado"', async () => {
+      const { calculateEPR } = await import('./api');
+
+      await calculateEPR({
+        state: 'Colorado',
+        material: 'HDPE',
+        weight_lbs: 100,
+      });
+
+      expect(capturedPayload?.state).toBe('colorado');
+      expect(capturedPayload?.state).not.toBe('Colorado');
+    });
+
+    it('should send lowercase state in payload for "OREGON"', async () => {
+      const { calculateEPR } = await import('./api');
+
+      await calculateEPR({
+        state: 'OREGON',
+        material_category: 'glass_and_ceramics',
+        sub_category: 'ceramic_all_forms',
+        weight_lbs: 100,
+      });
+
+      expect(capturedPayload?.state).toBe('oregon');
+      expect(capturedPayload?.state).not.toBe('OREGON');
+    });
+
+    it('should send lowercase state in payload for " Oregon " (with whitespace)', async () => {
+      const { calculateEPR } = await import('./api');
+
+      await calculateEPR({
+        state: ' Oregon ',
+        material_category: 'glass_and_ceramics',
+        sub_category: 'ceramic_all_forms',
+        weight_lbs: 100,
+      });
+
+      expect(capturedPayload?.state).toBe('oregon');
+    });
   });
 });

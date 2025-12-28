@@ -1,3 +1,5 @@
+import { normalizeStateCode } from "../utils/stateCode";
+
 // API base URL - empty string in dev (uses Vite proxy), full URL in production
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -138,8 +140,12 @@ export interface ColoradoPhase2CalculateResponse {
 }
 
 export async function fetchMaterials(state: string): Promise<Material[]> {
+  // CRITICAL: Normalize state code to lowercase to prevent 404 errors
+  // Backend API routes are case-sensitive and expect lowercase state codes
+  const normalizedState = normalizeStateCode(state);
+
   const res = await fetch(
-    `${API_BASE_URL}/materials/${encodeURIComponent(state)}`
+    `${API_BASE_URL}/materials/${encodeURIComponent(normalizedState)}`
   );
 
   if (!res.ok) {
@@ -168,11 +174,17 @@ export async function fetchOregonGroupedMaterials(): Promise<OregonGroupedMateri
 /**
  * Build the correct API payload based on state.
  * Oregon and Colorado have different required fields.
+ *
+ * CRITICAL: Uses normalizeStateCode to ensure lowercase state in all payloads.
+ * The backend API is case-sensitive and requires lowercase state codes.
  */
 function buildCalculatePayload(input: CalculateRequest): Record<string, unknown> {
   const { state, weight_lbs } = input;
 
-  if (state.toLowerCase() === "oregon") {
+  // CRITICAL: Normalize state code to lowercase to prevent API errors
+  const normalizedState = normalizeStateCode(state);
+
+  if (normalizedState === "oregon") {
     // HARD GUARD: Oregon requires material_category and sub_category
     if (!input.material_category) {
       throw new Error("Oregon requires material_category");
@@ -183,7 +195,7 @@ function buildCalculatePayload(input: CalculateRequest): Record<string, unknown>
 
     // Oregon payload - NEVER include 'material'
     const payload: Record<string, unknown> = {
-      state: state.toLowerCase(),
+      state: normalizedState,
       material_category: input.material_category,
       sub_category: input.sub_category,
       weight_lbs,
@@ -205,7 +217,7 @@ function buildCalculatePayload(input: CalculateRequest): Record<string, unknown>
   }
 
   return {
-    state: state.toLowerCase(),
+    state: normalizedState,
     material: input.material,
     weight_lbs,
   };
