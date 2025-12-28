@@ -1,15 +1,22 @@
 /**
  * API Proxy Configuration Tests
  *
- * These tests verify that API calls use the correct URL patterns:
- * - In development: Use relative URLs (proxied by Vite to localhost:8000)
- * - In production: Use VITE_API_BASE_URL
+ * These tests verify that API calls use RELATIVE URLs only:
+ * - In development: Relative URLs are proxied by Vite to localhost:8000
+ * - In production: Relative URLs are proxied by Vercel rewrites to the backend
  *
- * CRITICAL: If these tests fail, the browser UI will not connect to the backend.
+ * CRITICAL: All API calls MUST use relative paths (starting with "/").
+ * Absolute URLs are FORBIDDEN because:
+ * 1. They bypass Vercel rewrites in production
+ * 2. They cause mixed-content errors in HTTPS iframes (Squarespace)
  *
  * The Vite dev server proxy rules are defined in vite.config.ts:
  * - /materials/** → http://localhost:8000
  * - /calculate/** → http://localhost:8000
+ *
+ * The Vercel production rewrites are defined in vercel.json:
+ * - /materials/* → https://epr-calculator-edge-probe.onrender.com/materials/*
+ * - /calculate/* → https://epr-calculator-edge-probe.onrender.com/calculate/*
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -190,20 +197,46 @@ describe("Vite proxy configuration", () => {
 });
 
 /**
- * API_BASE_URL environment variable behavior
+ * Relative URL Enforcement
  *
- * Validates that the API module correctly handles the VITE_API_BASE_URL env var.
+ * CRITICAL: The API module must NEVER use absolute URLs.
+ * All API calls must use relative paths so that:
+ * 1. Vercel rewrites can proxy them to the backend in production
+ * 2. No mixed-content errors occur when embedded in HTTPS iframes (Squarespace)
+ * 3. Vite proxy works correctly in development
+ *
+ * Environment variables for API URLs are FORBIDDEN.
  */
-describe("API_BASE_URL behavior", () => {
-  it("API module uses empty string as default (relies on Vite proxy)", async () => {
+describe("Relative URL enforcement", () => {
+  it("API module does NOT use VITE_API_BASE_URL (hardcoded relative paths only)", async () => {
     const fs = await import("node:fs");
     const path = await import("node:path");
 
     const apiPath = path.join(process.cwd(), "src/services/api.ts");
     const apiContent = fs.readFileSync(apiPath, "utf-8");
 
-    // Must have the pattern: VITE_API_BASE_URL || ""
-    expect(apiContent).toContain('import.meta.env.VITE_API_BASE_URL || ""');
+    // Must NOT use any environment variable for API base URL
+    expect(apiContent).not.toContain("VITE_API_BASE_URL");
+    expect(apiContent).not.toContain("import.meta.env");
+
+    // Must NOT contain any absolute URLs to the backend
+    expect(apiContent).not.toContain("onrender.com");
+    expect(apiContent).not.toContain("epr-calculator-edge-probe");
+  });
+
+  it("API module uses relative paths for all fetch calls", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+
+    const apiPath = path.join(process.cwd(), "src/services/api.ts");
+    const apiContent = fs.readFileSync(apiPath, "utf-8");
+
+    // All fetch calls should use relative paths starting with "/"
+    // Check that we have the expected relative endpoints
+    expect(apiContent).toContain('fetch("/materials/oregon/grouped")');
+    expect(apiContent).toContain('fetch("/materials/colorado/phase2/groups")');
+    expect(apiContent).toContain('fetch("/calculate"');
+    expect(apiContent).toContain('fetch("/calculate/colorado/phase2"');
   });
 
   it(".env file has VITE_API_BASE_URL empty for dev mode", async () => {

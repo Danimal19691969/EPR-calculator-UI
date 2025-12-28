@@ -237,3 +237,172 @@ describe('State code normalization and endpoint routing', () => {
     });
   });
 });
+
+/**
+ * CRITICAL: Relative URL Enforcement Tests
+ *
+ * PRODUCTION BUG: Oregon API calls fail in Squarespace iframe due to mixed-content
+ * errors. The frontend was leaking absolute HTTP URLs which bypass Vercel rewrites.
+ *
+ * ALL API calls MUST use relative paths (starting with "/") so that:
+ * 1. Vercel rewrites can proxy them to the backend
+ * 2. No mixed-content errors occur in HTTPS iframes
+ * 3. Oregon and Colorado use identical URL construction logic
+ *
+ * These tests prevent regression by asserting:
+ * - URLs start with "/"
+ * - URLs do NOT contain "http://" or "https://"
+ * - URLs do NOT contain "onrender.com"
+ */
+describe('CRITICAL: All API calls must use relative URLs', () => {
+  describe('Oregon endpoints must be relative', () => {
+    it('fetchMaterials("Oregon") must use relative URL starting with "/"', async () => {
+      const { fetchMaterials } = await import('./api');
+
+      await fetchMaterials('Oregon');
+
+      // URL must start with "/" (relative path)
+      expect(capturedUrl).toMatch(/^\//);
+      // URL must NOT contain any protocol
+      expect(capturedUrl).not.toContain('http://');
+      expect(capturedUrl).not.toContain('https://');
+      // URL must NOT contain backend domain
+      expect(capturedUrl).not.toContain('onrender.com');
+      expect(capturedUrl).not.toContain('epr-calculator');
+    });
+
+    it('fetchOregonGroupedMaterials must use relative URL starting with "/"', async () => {
+      const { fetchOregonGroupedMaterials } = await import('./api');
+
+      await fetchOregonGroupedMaterials();
+
+      // URL must start with "/" (relative path)
+      expect(capturedUrl).toMatch(/^\//);
+      // URL must NOT contain any protocol
+      expect(capturedUrl).not.toContain('http://');
+      expect(capturedUrl).not.toContain('https://');
+      // URL must NOT contain backend domain
+      expect(capturedUrl).not.toContain('onrender.com');
+    });
+
+    it('calculateEPR for Oregon must use relative URL starting with "/"', async () => {
+      const { calculateEPR } = await import('./api');
+
+      await calculateEPR({
+        state: 'Oregon',
+        material_category: 'glass_and_ceramics',
+        sub_category: 'ceramic_all_forms',
+        weight_lbs: 100,
+      });
+
+      // URL must start with "/" (relative path)
+      expect(capturedUrl).toMatch(/^\//);
+      // URL must NOT contain any protocol
+      expect(capturedUrl).not.toContain('http://');
+      expect(capturedUrl).not.toContain('https://');
+      // URL must NOT contain backend domain
+      expect(capturedUrl).not.toContain('onrender.com');
+    });
+  });
+
+  describe('Colorado endpoints must be relative', () => {
+    it('fetchMaterials("Colorado") must use relative URL starting with "/"', async () => {
+      const { fetchMaterials } = await import('./api');
+
+      await fetchMaterials('Colorado');
+
+      // URL must start with "/" (relative path)
+      expect(capturedUrl).toMatch(/^\//);
+      // URL must NOT contain any protocol
+      expect(capturedUrl).not.toContain('http://');
+      expect(capturedUrl).not.toContain('https://');
+      // URL must NOT contain backend domain
+      expect(capturedUrl).not.toContain('onrender.com');
+    });
+
+    it('fetchColoradoPhase2Groups must use relative URL starting with "/"', async () => {
+      // Override mock to return valid Phase 2 response shape
+      vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
+        capturedUrl = url;
+        return {
+          ok: true,
+          json: async () => ({
+            groups: [
+              { group_key: 'test', group_name: 'Test Group', status: 'MRL', base_rate_per_lb: 0.01 }
+            ]
+          }),
+        };
+      }));
+
+      const { fetchColoradoPhase2Groups } = await import('./api');
+
+      await fetchColoradoPhase2Groups();
+
+      // URL must start with "/" (relative path)
+      expect(capturedUrl).toMatch(/^\//);
+      // URL must NOT contain any protocol
+      expect(capturedUrl).not.toContain('http://');
+      expect(capturedUrl).not.toContain('https://');
+      // URL must NOT contain backend domain
+      expect(capturedUrl).not.toContain('onrender.com');
+    });
+
+    it('calculateColoradoPhase2 must use relative URL starting with "/"', async () => {
+      const { calculateColoradoPhase2 } = await import('./api');
+
+      await calculateColoradoPhase2({
+        aggregated_group: 'test_group',
+        weight_lbs: 100,
+        pro_modulation_percent: 0,
+        cdphe_bonus_percent: 0,
+        newspaper_credit: 0,
+      });
+
+      // URL must start with "/" (relative path)
+      expect(capturedUrl).toMatch(/^\//);
+      // URL must NOT contain any protocol
+      expect(capturedUrl).not.toContain('http://');
+      expect(capturedUrl).not.toContain('https://');
+      // URL must NOT contain backend domain
+      expect(capturedUrl).not.toContain('onrender.com');
+    });
+
+    it('calculateEPR for Colorado must use relative URL starting with "/"', async () => {
+      const { calculateEPR } = await import('./api');
+
+      await calculateEPR({
+        state: 'Colorado',
+        material: 'HDPE',
+        weight_lbs: 100,
+      });
+
+      // URL must start with "/" (relative path)
+      expect(capturedUrl).toMatch(/^\//);
+      // URL must NOT contain any protocol
+      expect(capturedUrl).not.toContain('http://');
+      expect(capturedUrl).not.toContain('https://');
+      // URL must NOT contain backend domain
+      expect(capturedUrl).not.toContain('onrender.com');
+    });
+  });
+
+  describe('URL construction parity between states', () => {
+    it('Oregon and Colorado must use identical URL construction (no special casing)', async () => {
+      const { fetchMaterials } = await import('./api');
+
+      await fetchMaterials('Oregon');
+      const oregonUrl = capturedUrl;
+
+      await fetchMaterials('Colorado');
+      const coloradoUrl = capturedUrl;
+
+      // Both must be relative paths
+      expect(oregonUrl).toMatch(/^\//);
+      expect(coloradoUrl).toMatch(/^\//);
+
+      // Neither should have absolute URLs
+      expect(oregonUrl).not.toMatch(/^https?:\/\//);
+      expect(coloradoUrl).not.toMatch(/^https?:\/\//);
+    });
+  });
+});

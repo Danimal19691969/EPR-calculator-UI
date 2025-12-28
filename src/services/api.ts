@@ -1,7 +1,20 @@
 import { normalizeStateCode } from "../utils/stateCode";
 
-// API base URL - empty string in dev (uses Vite proxy), full URL in production
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+/**
+ * CRITICAL: All API calls MUST use relative URLs.
+ *
+ * WHY: The frontend is deployed on Vercel and may be embedded in HTTPS iframes
+ * (e.g., Squarespace). Using absolute URLs causes:
+ * 1. Mixed-content errors (HTTP in HTTPS iframe)
+ * 2. Bypasses Vercel rewrites that proxy to the backend
+ *
+ * Vercel rewrites (in vercel.json) handle proxying:
+ * - /materials/* → backend
+ * - /calculate/* → backend
+ *
+ * DO NOT use environment variables for API URLs.
+ * DO NOT use absolute URLs anywhere in this file.
+ */
 
 /**
  * Sub-category for materials that have granular classifications.
@@ -164,10 +177,10 @@ export async function fetchMaterials(state: string): Promise<Material[]> {
 
   switch (normalizedState) {
     case "oregon":
-      endpoint = `${API_BASE_URL}/materials/oregon/grouped`;
+      endpoint = "/materials/oregon/grouped";
       break;
     case "colorado":
-      endpoint = `${API_BASE_URL}/materials/colorado/phase2/groups`;
+      endpoint = "/materials/colorado/phase2/groups";
       break;
     default:
       throw new Error(`Unsupported state: "${state}". Supported states are: Oregon, Colorado`);
@@ -188,7 +201,7 @@ export async function fetchMaterials(state: string): Promise<Material[]> {
  * Oregon uses a different endpoint and response structure than other states.
  */
 export async function fetchOregonGroupedMaterials(): Promise<OregonGroupedMaterialsResponse> {
-  const res = await fetch(`${API_BASE_URL}/materials/oregon/grouped`);
+  const res = await fetch("/materials/oregon/grouped");
 
   if (!res.ok) {
     const text = await res.text();
@@ -256,7 +269,7 @@ export async function calculateEPR(
   // Transform input to correct backend format
   const apiPayload = buildCalculatePayload(payload);
 
-  const res = await fetch(`${API_BASE_URL}/calculate`, {
+  const res = await fetch("/calculate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(apiPayload),
@@ -376,7 +389,7 @@ export function normalizeColoradoPhase2Groups(raw: unknown): ColoradoPhase2Group
  * backend format (wrapped, camelCase, string rates, etc.).
  */
 export async function fetchColoradoPhase2Groups(): Promise<ColoradoPhase2Group[]> {
-  const res = await fetch(`${API_BASE_URL}/materials/colorado/phase2/groups`);
+  const res = await fetch("/materials/colorado/phase2/groups");
 
   if (!res.ok) {
     const text = await res.text();
@@ -411,7 +424,7 @@ export async function calculateColoradoPhase2(
     throw new Error("Weight must be greater than 0");
   }
 
-  const res = await fetch(`${API_BASE_URL}/calculate/colorado/phase2`, {
+  const res = await fetch("/calculate/colorado/phase2", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
