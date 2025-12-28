@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/materials/:path*",
+      "destination": "https://epr-calculator-edge-probe.onrender.com/materials/:path*"
+    },
+    {
+      "source": "/calculate/:path*",
+      "destination": "https://epr-calculator-edge-probe.onrender.com/calculate/:path*"
+    }
+  ]
+}
