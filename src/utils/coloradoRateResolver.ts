@@ -23,18 +23,16 @@ import type { ColoradoPhase2Group } from "../services/api";
  * This helps identify where zero/blank rates originate.
  *
  * @param groups - The array of Colorado Phase 2 groups (from API)
- * @param apiBaseUrl - The API base URL being used
  */
 export function logColoradoRateDiagnostics(
-  groups: ColoradoPhase2Group[],
-  apiBaseUrl: string
+  groups: ColoradoPhase2Group[]
 ): void {
   if (import.meta.env.PROD) {
     return; // Never log in production
   }
 
   console.group("🔍 Colorado Phase 2 Rate Diagnostics");
-  console.log("API Base URL:", apiBaseUrl || "(empty - using Vite proxy)");
+  console.log("API: Using relative paths (Vercel rewrites → backend)");
   console.log("Groups count:", groups.length);
 
   const diagnosticRows = groups.map((g) => {

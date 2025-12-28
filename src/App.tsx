@@ -295,7 +295,7 @@ export default function App() {
         const groups = await fetchColoradoPhase2Groups();
         if (!cancelled) {
           // DEV ONLY: Log diagnostic table to trace rate data flow
-          logColoradoRateDiagnostics(groups, import.meta.env.VITE_API_BASE_URL || "");
+          logColoradoRateDiagnostics(groups);
 
           setPhase2Groups(groups);
           if (groups.length > 0) {
@@ -1105,17 +1105,28 @@ export default function App() {
             )}
 
             {/* Oregon Delta Timeline Toggle and Visualization */}
-            {isOregon && result && result.lca_bonus.amount !== 0 && (() => {
+            {isOregon && result && (() => {
               const initialFee = result.initial_fee || 0;
               const lcaBonusAmount = result.lca_bonus.amount || 0;
+              const hasLCABonus = lcaBonusAmount !== 0;
 
-              const timelineSteps: TimelineStep[] = [
-                {
+              // Build timeline steps - always include LCA row for Oregon
+              const timelineSteps: TimelineStep[] = [];
+
+              if (hasLCABonus) {
+                timelineSteps.push({
                   label: "LCA Bonus",
                   delta: -lcaBonusAmount,
                   sublabel: lcaSelection === "bonusB" ? "Bonus B (Impact Reduction)" : "Bonus A (Disclosure)",
-                },
-              ];
+                });
+              } else {
+                // Show $0.00 LCA adjustment when no bonus selected
+                timelineSteps.push({
+                  label: "LCA Adjustment",
+                  delta: 0,
+                  sublabel: "No LCA bonus selected",
+                });
+              }
 
               return (
                 <>
