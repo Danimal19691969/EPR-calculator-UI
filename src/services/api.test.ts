@@ -128,51 +128,70 @@ describe('Oregon payload construction', () => {
 });
 
 /**
- * State Code Normalization Tests
+ * State Code Normalization and Endpoint Routing Tests
  *
- * CRITICAL BUG FIX: The backend API requires lowercase state codes.
- * FastAPI routes are case-sensitive, so /materials/Colorado returns 404.
- * These tests ensure all API calls use lowercase state codes.
+ * CRITICAL BUG FIX: The backend API has STATE-SPECIFIC endpoints:
+ * - Oregon: /materials/oregon/grouped
+ * - Colorado: /materials/colorado/phase2/groups
+ *
+ * The generic /materials/{state} endpoint does NOT exist and causes 404 errors.
+ * These tests ensure fetchMaterials routes to the correct state-specific endpoint.
  */
-describe('State code normalization', () => {
-  describe('fetchMaterials URL normalization', () => {
-    it('should use lowercase state in URL for "Colorado"', async () => {
+describe('State code normalization and endpoint routing', () => {
+  describe('fetchMaterials state-specific endpoint routing', () => {
+    it('should call /materials/oregon/grouped for Oregon', async () => {
+      const { fetchMaterials } = await import('./api');
+
+      await fetchMaterials('Oregon');
+
+      // Must use the Oregon-specific endpoint
+      expect(capturedUrl).toContain('/materials/oregon/grouped');
+      // Must NOT use generic /materials/oregon (which doesn't exist)
+      expect(capturedUrl).not.toMatch(/\/materials\/oregon$/);
+    });
+
+    it('should call /materials/colorado/phase2/groups for Colorado', async () => {
       const { fetchMaterials } = await import('./api');
 
       await fetchMaterials('Colorado');
 
-      // URL should end with lowercase /materials/colorado
-      expect(capturedUrl).toContain('/materials/colorado');
-      expect(capturedUrl).not.toContain('Colorado');
+      // Must use the Colorado Phase 2 specific endpoint
+      expect(capturedUrl).toContain('/materials/colorado/phase2/groups');
+      // Must NOT use generic /materials/colorado (which doesn't exist)
+      expect(capturedUrl).not.toMatch(/\/materials\/colorado$/);
     });
 
-    it('should use lowercase state in URL for "OREGON"', async () => {
+    it('should call correct Oregon endpoint for "OREGON" (uppercase)', async () => {
       const { fetchMaterials } = await import('./api');
 
       await fetchMaterials('OREGON');
 
-      // URL should end with lowercase /materials/oregon
-      expect(capturedUrl).toContain('/materials/oregon');
+      expect(capturedUrl).toContain('/materials/oregon/grouped');
       expect(capturedUrl).not.toContain('OREGON');
     });
 
-    it('should use lowercase state in URL for " Oregon " (with whitespace)', async () => {
+    it('should call correct Colorado endpoint for " Colorado " (with whitespace)', async () => {
       const { fetchMaterials } = await import('./api');
 
-      await fetchMaterials(' Oregon ');
+      await fetchMaterials(' Colorado ');
 
-      // URL should end with lowercase /materials/oregon
-      expect(capturedUrl).toContain('/materials/oregon');
-      expect(capturedUrl).not.toContain('Oregon');
+      expect(capturedUrl).toContain('/materials/colorado/phase2/groups');
     });
 
-    it('should use lowercase state in URL for already lowercase "colorado"', async () => {
+    it('should throw error for unsupported state "Texas"', async () => {
       const { fetchMaterials } = await import('./api');
 
-      await fetchMaterials('colorado');
+      await expect(fetchMaterials('Texas')).rejects.toThrow(
+        'Unsupported state: "Texas". Supported states are: Oregon, Colorado'
+      );
+    });
 
-      // URL should end with lowercase /materials/colorado
-      expect(capturedUrl).toContain('/materials/colorado');
+    it('should throw error for unsupported state "california"', async () => {
+      const { fetchMaterials } = await import('./api');
+
+      await expect(fetchMaterials('california')).rejects.toThrow(
+        'Unsupported state: "california". Supported states are: Oregon, Colorado'
+      );
     });
   });
 

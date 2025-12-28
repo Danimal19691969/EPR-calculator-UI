@@ -139,18 +139,45 @@ export interface ColoradoPhase2CalculateResponse {
   newspaper_credit: number;
 }
 
+/**
+ * Fetch materials for a given state.
+ *
+ * CRITICAL: Each state has a DIFFERENT endpoint structure:
+ * - Oregon: /materials/oregon/grouped (returns OregonGroupedMaterialsResponse)
+ * - Colorado: /materials/colorado/phase2/groups (returns ColoradoPhase2Group[])
+ *
+ * This function routes to the correct state-specific endpoint.
+ * For unsupported states, it throws an explicit error.
+ *
+ * NOTE: This function returns Material[] for backward compatibility,
+ * but callers should use state-specific fetch functions for proper typing:
+ * - fetchOregonGroupedMaterials() for Oregon
+ * - fetchColoradoPhase2Groups() for Colorado Phase 2
+ */
 export async function fetchMaterials(state: string): Promise<Material[]> {
   // CRITICAL: Normalize state code to lowercase to prevent 404 errors
   // Backend API routes are case-sensitive and expect lowercase state codes
   const normalizedState = normalizeStateCode(state);
 
-  const res = await fetch(
-    `${API_BASE_URL}/materials/${encodeURIComponent(normalizedState)}`
-  );
+  // Route to the correct state-specific endpoint
+  let endpoint: string;
+
+  switch (normalizedState) {
+    case "oregon":
+      endpoint = `${API_BASE_URL}/materials/oregon/grouped`;
+      break;
+    case "colorado":
+      endpoint = `${API_BASE_URL}/materials/colorado/phase2/groups`;
+      break;
+    default:
+      throw new Error(`Unsupported state: "${state}". Supported states are: Oregon, Colorado`);
+  }
+
+  const res = await fetch(endpoint);
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Failed to fetch materials: ${text}`);
+    throw new Error(`Failed to fetch materials for ${normalizedState}: ${text}`);
   }
 
   return res.json();
