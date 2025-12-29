@@ -1104,28 +1104,41 @@ export default function App() {
               />
             )}
 
-            {/* Oregon Delta Timeline Toggle and Visualization */}
-            {isOregon && result && (() => {
+            {/* Fee Adjustment Timeline - Shown for any state with result data */}
+            {result && (() => {
               const initialFee = result.initial_fee || 0;
               const lcaBonusAmount = result.lca_bonus.amount || 0;
               const hasLCABonus = lcaBonusAmount !== 0;
 
-              // Build timeline steps - always include LCA row for Oregon
+              // Build timeline steps based on available adjustment data
               const timelineSteps: TimelineStep[] = [];
 
-              if (hasLCABonus) {
-                timelineSteps.push({
-                  label: "LCA Bonus",
-                  delta: -lcaBonusAmount,
-                  sublabel: lcaSelection === "bonusB" ? "Bonus B (Impact Reduction)" : "Bonus A (Disclosure)",
-                });
-              } else {
-                // Show $0.00 LCA adjustment when no bonus selected
-                timelineSteps.push({
-                  label: "LCA Adjustment",
-                  delta: 0,
-                  sublabel: "No LCA bonus selected",
-                });
+              // LCA Bonus/Adjustment: Show for states that support LCA
+              // Oregon: Always show (even $0 when no bonus selected)
+              // Colorado: Only show if there's a non-zero bonus
+              if (stateRules?.supportsLCA) {
+                if (hasLCABonus) {
+                  timelineSteps.push({
+                    label: "LCA Bonus",
+                    delta: -lcaBonusAmount,
+                    sublabel: isOregon
+                      ? (lcaSelection === "bonusB" ? "Bonus B (Impact Reduction)" : "Bonus A (Disclosure)")
+                      : "Life Cycle Assessment Credit",
+                  });
+                } else if (isOregon) {
+                  // Oregon shows $0.00 LCA adjustment when no bonus selected
+                  timelineSteps.push({
+                    label: "LCA Adjustment",
+                    delta: 0,
+                    sublabel: "No LCA bonus selected",
+                  });
+                }
+              }
+
+              // Only show timeline if there are steps to display
+              // (Colorado Phase 1 may have no adjustments, so hide toggle)
+              if (timelineSteps.length === 0) {
+                return null;
               }
 
               return (
