@@ -15,6 +15,7 @@
 
 import { forwardRef } from "react";
 import type { TimelineStep } from "./DeltaTimeline";
+import type { AdjustmentTimelineStep } from "../services/api";
 import {
   PDF_TITLE,
   PDF_LOGO_ALT,
@@ -45,8 +46,18 @@ export interface PrintableResultsLayoutProps {
   finalPayable: number;
   baseDues: number;
 
-  // Timeline steps (for delta visualization)
+  /**
+   * Timeline steps for delta visualization.
+   *
+   * ARCHITECTURE: Backend is SINGLE SOURCE OF TRUTH.
+   * - If backendTimeline is provided, it is used directly (preferred)
+   * - If only timelineSteps is provided, it falls back to legacy format
+   *
+   * The backendTimeline provides running_total directly from backend,
+   * ensuring UI and PDF display identical values.
+   */
   timelineSteps: TimelineStep[];
+  backendTimeline?: AdjustmentTimelineStep[];
 
   // Fee breakdown rows
   breakdownRows: BreakdownRow[];
@@ -107,6 +118,7 @@ const PrintableResultsLayout = forwardRef<HTMLDivElement, PrintableResultsLayout
       finalPayable,
       baseDues,
       timelineSteps,
+      backendTimeline,
       breakdownRows,
       explanationParagraphs,
       authorityText,
@@ -115,12 +127,30 @@ const PrintableResultsLayout = forwardRef<HTMLDivElement, PrintableResultsLayout
     },
     ref
   ) {
-    // Build timeline model for SVG rendering
-    const timelineNodes = buildTimelineNodes(baseDues, timelineSteps, finalPayable);
+    /**
+     * UNIFIED TIMELINE RENDERING
+     *
+     * Backend is SINGLE SOURCE OF TRUTH:
+     * - If backendTimeline is provided, use it directly (preferred path)
+     * - Otherwise, fall back to legacy buildTimelineNodes (for backwards compat)
+     *
+     * This ensures PDF displays IDENTICAL values to on-screen BackendTimeline.
+     */
+    const timelineNodes = backendTimeline
+      ? buildTimelineNodesFromBackend(backendTimeline)
+      : buildTimelineNodes(baseDues, timelineSteps, finalPayable);
+
     const maxAbsDelta = Math.max(
-      ...timelineSteps.map((s) => Math.abs(s.delta)),
+      ...(backendTimeline
+        ? backendTimeline.map((s) => Math.abs(s.amount ?? s.rate_delta ?? 0))
+        : timelineSteps.map((s) => Math.abs(s.delta))),
       1
     );
+
+    // Log for verification
+    if (backendTimeline) {
+      console.log("PDF_TIMELINE_RENDER_FROM_BACKEND_ONLY: true");
+    }
 
     return (
       <div ref={ref} className="pdf-layout">
@@ -463,6 +493,73 @@ function buildTimelineNodes(
     delta: 0,
     runningValue: finalPayable,
   });
+
+  return nodes;
+}
+
+/**
+ * Build timeline nodes from backend AdjustmentTimelineStep[].
+ *
+ * CRITICAL: This function does NOT compute any values.
+ * It uses running_total directly from backend - the SINGLE SOURCE OF TRUTH.
+ *
+ * This ensures PDF displays IDENTICAL values to on-screen BackendTimeline.
+ */
+function buildTimelineNodesFromBackend(
+  backendSteps: AdjustmentTimelineStep[]
+): Array<{
+  id: string;
+  label: string;
+  type: "start" | "delta" | "final";
+  delta: number;
+  runningValue: number;
+}> {
+  if (!backendSteps || backendSteps.length === 0) {
+    return [];
+  }
+
+  const nodes: Array<{
+    id: string;
+    label: string;
+    type: "start" | "delta" | "final";
+    delta: number;
+    runningValue: number;
+  }> = [];
+
+  backendSteps.forEach((step, i) => {
+    const delta = step.amount ?? step.rate_delta ?? 0;
+    const isFinal = step.is_final === true || i === backendSteps.length - 1;
+    const isFirst = i === 0;
+
+    // Determine node type based on position and content
+    let type: "start" | "delta" | "final";
+    if (isFirst && delta === 0) {
+      type = "start";
+    } else if (isFinal) {
+      type = "final";
+    } else {
+      type = "delta";
+    }
+
+    nodes.push({
+      id: `step-${step.step}`,
+      label: step.label,
+      type,
+      delta,
+      // CRITICAL: Use running_total from backend directly - NO CLIENT-SIDE COMPUTATION
+      runningValue: step.running_total,
+    });
+  });
+
+  // If the last node isn't marked as final but we have a finalPayable,
+  // ensure the last node shows the correct final value
+  if (nodes.length > 0) {
+    const lastNode = nodes[nodes.length - 1];
+    if (lastNode.type !== "final") {
+      lastNode.type = "final";
+    }
+    // Use backend running_total, not finalPayable (backend is authoritative)
+  }
 
   return nodes;
 }

@@ -1096,6 +1096,7 @@ export default function App() {
           finalPayable={result?.total_fee || 0}
           baseDues={result?.initial_fee || 0}
           timelineSteps={buildTimelineSteps()}
+          backendTimeline={result?.adjustment_timeline}
           breakdownRows={buildBreakdownRows()}
           explanationParagraphs={buildExplanationParagraphs()}
           authorityText={`This estimate is calculated under the ${getStateLegal(state).lawName}.`}

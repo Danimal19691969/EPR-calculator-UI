@@ -196,34 +196,65 @@ export function buildColoradoPhase2Snapshot(input: ColoradoPhase2SnapshotInput):
     type: "total",
   });
 
-  // Build timeline steps - EXACT same as UI DeltaTimeline
+  /**
+   * Build timeline steps.
+   *
+   * ARCHITECTURE: Backend is SINGLE SOURCE OF TRUTH.
+   * - If result.adjustment_timeline exists, use it directly (preferred)
+   * - Otherwise, fall back to legacy client-side computation (for backwards compat)
+   *
+   * This ensures PDF displays IDENTICAL values to on-screen BackendTimeline.
+   */
   const timelineSteps: PdfSnapshotTimelineStep[] = [];
 
-  if (proModulationPercent > 0) {
-    timelineSteps.push({
-      label: "Eco-Mod",
-      sublabel: "PRO Eco-Modulation",
-      deltaDisplay: `-${formatCurrency(proModulationDelta)}`,
-      deltaMagnitude: proModulationDelta,
-    });
-  }
+  if (result.adjustment_timeline && result.adjustment_timeline.length > 0) {
+    // PREFERRED: Use backend-provided timeline directly
+    console.log("PDF_TIMELINE_RENDER_FROM_BACKEND_ONLY: true");
+    for (const step of result.adjustment_timeline) {
+      const delta = step.amount ?? step.rate_delta ?? 0;
+      // Skip steps with no delta (like "Base Dues" start step)
+      if (delta === 0 && !step.is_final) {
+        continue;
+      }
+      // Skip final step (it's not a delta, it's the end state)
+      if (step.is_final) {
+        continue;
+      }
+      timelineSteps.push({
+        label: step.label,
+        sublabel: step.description,
+        deltaDisplay: delta < 0 ? `-${formatCurrency(Math.abs(delta))}` : formatCurrency(delta),
+        deltaMagnitude: Math.abs(delta),
+      });
+    }
+  } else {
+    // LEGACY FALLBACK: Client-side computation (when backend doesn't provide timeline)
+    if (proModulationPercent > 0) {
+      timelineSteps.push({
+        label: "Eco-Mod",
+        sublabel: "PRO Eco-Modulation",
+        deltaDisplay: `-${formatCurrency(proModulationDelta)}`,
+        deltaMagnitude: proModulationDelta,
+      });
+    }
 
-  if (cdpheBonusPercent > 0) {
-    timelineSteps.push({
-      label: "CDPHE",
-      sublabel: "CDPHE Performance Benchmarks",
-      deltaDisplay: `-${formatCurrency(cdpheBonusDelta)}`,
-      deltaMagnitude: cdpheBonusDelta,
-    });
-  }
+    if (cdpheBonusPercent > 0) {
+      timelineSteps.push({
+        label: "CDPHE",
+        sublabel: "CDPHE Performance Benchmarks",
+        deltaDisplay: `-${formatCurrency(cdpheBonusDelta)}`,
+        deltaMagnitude: cdpheBonusDelta,
+      });
+    }
 
-  if (hasInKindCredit) {
-    timelineSteps.push({
-      label: "In-Kind",
-      sublabel: "In-Kind Advertising Credit",
-      deltaDisplay: `-${formatCurrency(inKindCredit)}`,
-      deltaMagnitude: inKindCredit,
-    });
+    if (hasInKindCredit) {
+      timelineSteps.push({
+        label: "In-Kind",
+        sublabel: "In-Kind Advertising Credit",
+        deltaDisplay: `-${formatCurrency(inKindCredit)}`,
+        deltaMagnitude: inKindCredit,
+      });
+    }
   }
 
   // Build explanation paragraphs using the SAME generator as the UI
