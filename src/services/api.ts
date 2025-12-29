@@ -95,6 +95,21 @@ export interface LCABonus {
   tier?: string;
 }
 
+/**
+ * Backend-provided timeline step for fee adjustments.
+ * The backend is the SINGLE SOURCE OF TRUTH for timeline data.
+ * The UI must NOT compute or derive these values.
+ */
+export interface AdjustmentTimelineStep {
+  step: number;
+  label: string;
+  description: string;
+  amount?: number;
+  rate_delta?: number;
+  running_total: number;
+  is_final?: boolean;
+}
+
 export interface CalculateResponse {
   state: string;
   weight_lbs: number;
@@ -103,6 +118,8 @@ export interface CalculateResponse {
   total_fee: number;
   status: string;
   program_start: string | null;
+  /** Backend-provided adjustment timeline. UI renders this directly without modification. */
+  adjustment_timeline?: AdjustmentTimelineStep[];
 }
 
 // ============================================
@@ -150,6 +167,8 @@ export interface ColoradoPhase2CalculateResponse {
   pro_modulation_percent: number;
   cdphe_bonus_percent: number;
   newspaper_credit: number;
+  /** Backend-provided adjustment timeline. UI renders this directly without modification. */
+  adjustment_timeline?: AdjustmentTimelineStep[];
 }
 
 /**

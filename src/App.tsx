@@ -34,8 +34,8 @@ import EcoModulationSelector, { ecoModulationTierToPercent } from "./components/
 import type { EcoModulationTier } from "./components/EcoModulationSelector";
 import InKindAdvertisingCredit, { isInKindEligible } from "./components/InKindAdvertisingCredit";
 import OregonLcaExplanation from "./components/OregonLcaExplanation";
-import DeltaTimeline from "./components/DeltaTimeline";
 import type { TimelineStep } from "./components/DeltaTimeline";
+import BackendTimeline from "./components/BackendTimeline";
 import PrintableResultsLayout from "./components/PrintableResultsLayout";
 import type { BreakdownRow } from "./components/PrintableResultsLayout";
 import PrintableResultsLayoutV2 from "./components/PrintableResultsLayoutV2";
@@ -672,49 +672,25 @@ export default function App() {
   /**
    * Build timeline steps for PDF export.
    *
-   * CRITICAL: For Colorado Phase 2, uses phase2DerivedValues as the SINGLE
-   * SOURCE OF TRUTH for all delta values. This ensures PDF timeline matches UI.
+   * CRITICAL: Backend is the SINGLE SOURCE OF TRUTH for timeline data.
+   * This function maps backend AdjustmentTimelineStep[] to TimelineStep[]
+   * for the PDF layout component. NO computation - just format transformation.
    */
   const buildTimelineSteps = useCallback((): TimelineStep[] => {
-    const steps: TimelineStep[] = [];
+    // Get backend timeline from whichever result is available
+    const backendTimeline = phase2Result?.adjustment_timeline ?? result?.adjustment_timeline;
 
-    if (isColoradoPhase2 && phase2DerivedValues) {
-      // Use derived values for consistency with UI
-      const { proModulationDelta, cdpheBonusDelta, inKindCredit, proModulationPercent, cdpheBonusPercent } = phase2DerivedValues;
-
-      if (proModulationPercent > 0) {
-        steps.push({
-          label: "Eco-Mod",
-          delta: -proModulationDelta,
-          sublabel: "PRO Eco-Modulation",
-        });
-      }
-
-      if (cdpheBonusPercent > 0) {
-        steps.push({
-          label: "CDPHE",
-          delta: -cdpheBonusDelta,
-          sublabel: "CDPHE Performance Benchmarks",
-        });
-      }
-
-      if (inKindCredit > 0) {
-        steps.push({
-          label: "In-Kind",
-          delta: -inKindCredit,
-          sublabel: "In-Kind Advertising Credit",
-        });
-      }
-    } else if (isOregon && result && result.lca_bonus.amount > 0) {
-      steps.push({
-        label: "LCA Bonus",
-        delta: -result.lca_bonus.amount,
-        sublabel: lcaSelection === "bonusB" ? "Bonus B" : "Bonus A",
-      });
+    if (!backendTimeline || backendTimeline.length === 0) {
+      return [];
     }
 
-    return steps;
-  }, [isColoradoPhase2, isOregon, phase2DerivedValues, result, lcaSelection]);
+    // Map backend format to PDF format (simple transformation, no computation)
+    return backendTimeline.map((step) => ({
+      label: step.label,
+      delta: step.amount ?? step.rate_delta ?? 0,
+      sublabel: step.description,
+    }));
+  }, [phase2Result?.adjustment_timeline, result?.adjustment_timeline]);
 
   // Determine if we have exportable results
   const hasExportableResults = (isColoradoPhase2 && phase2Result) || (!isColoradoPhase2 && result);
@@ -1006,79 +982,6 @@ export default function App() {
               />
             )}
 
-            {/* Colorado Phase 2 Delta Timeline Toggle and Visualization */}
-            {phase2Result && (() => {
-              /**
-               * CRITICAL: Use SAME derived values as Fee Breakdown and PDF.
-               * This ensures the timeline displays identical values.
-               *
-               * The timeline is RENDER-ONLY - it does NOT compute any values.
-               * All values come from computeColoradoPhase2DerivedValues().
-               */
-              const derived = computeColoradoPhase2DerivedValues(phase2Result);
-              const {
-                baseDues,
-                proModulationDelta,
-                cdpheBonusDelta,
-                inKindCredit,
-                finalPayable,
-              } = derived;
-
-              const timelineSteps: TimelineStep[] = [];
-
-              // Only add steps that have non-zero deltas
-              // Use canonical delta values from derived values (same as Fee Breakdown)
-              if (proModulationDelta !== 0) {
-                timelineSteps.push({
-                  label: "Eco-Mod",
-                  delta: -proModulationDelta,
-                  sublabel: "Layer 1: PRO Eco-Modulation",
-                });
-              }
-
-              if (cdpheBonusDelta !== 0) {
-                timelineSteps.push({
-                  label: "CDPHE",
-                  delta: -cdpheBonusDelta,
-                  sublabel: "Layer 2: CDPHE Performance Benchmarks",
-                });
-              }
-
-              if (inKindCredit !== 0) {
-                timelineSteps.push({
-                  label: "In-Kind",
-                  delta: -inKindCredit,
-                  sublabel: "Publisher In-Kind Advertising Credit",
-                });
-              }
-
-              // Only show timeline toggle if there are adjustments to visualize
-              if (timelineSteps.length === 0) {
-                return null;
-              }
-
-              return (
-                <>
-                  <button
-                    type="button"
-                    className="timeline-toggle-btn"
-                    onClick={() => setShowTimeline(!showTimeline)}
-                    aria-expanded={showTimeline}
-                  >
-                    {showTimeline ? "Hide Fee Adjustment Timeline" : "Show Fee Adjustment Timeline"}
-                  </button>
-
-                  {showTimeline && (
-                    <DeltaTimeline
-                      startValue={baseDues}
-                      steps={timelineSteps}
-                      finalValue={finalPayable}
-                      currency="$"
-                    />
-                  )}
-                </>
-              );
-            })()}
           </>
         ) : (
           <>
@@ -1104,67 +1007,49 @@ export default function App() {
               />
             )}
 
-            {/* Fee Adjustment Timeline - Shown for any state with result data */}
-            {result && (() => {
-              const initialFee = result.initial_fee || 0;
-              const lcaBonusAmount = result.lca_bonus.amount || 0;
-              const hasLCABonus = lcaBonusAmount !== 0;
-
-              // Build timeline steps based on available adjustment data
-              const timelineSteps: TimelineStep[] = [];
-
-              // LCA Bonus/Adjustment: Show for states that support LCA
-              // Oregon: Always show (even $0 when no bonus selected)
-              // Colorado: Only show if there's a non-zero bonus
-              if (stateRules?.supportsLCA) {
-                if (hasLCABonus) {
-                  timelineSteps.push({
-                    label: "LCA Bonus",
-                    delta: -lcaBonusAmount,
-                    sublabel: isOregon
-                      ? (lcaSelection === "bonusB" ? "Bonus B (Impact Reduction)" : "Bonus A (Disclosure)")
-                      : "Life Cycle Assessment Credit",
-                  });
-                } else if (isOregon) {
-                  // Oregon shows $0.00 LCA adjustment when no bonus selected
-                  timelineSteps.push({
-                    label: "LCA Adjustment",
-                    delta: 0,
-                    sublabel: "No LCA bonus selected",
-                  });
-                }
-              }
-
-              // Only show timeline if there are steps to display
-              // (Colorado Phase 1 may have no adjustments, so hide toggle)
-              if (timelineSteps.length === 0) {
-                return null;
-              }
-
-              return (
-                <>
-                  <button
-                    type="button"
-                    className="timeline-toggle-btn"
-                    onClick={() => setShowTimeline(!showTimeline)}
-                    aria-expanded={showTimeline}
-                  >
-                    {showTimeline ? "Hide Fee Adjustment Timeline" : "Show Fee Adjustment Timeline"}
-                  </button>
-
-                  {showTimeline && (
-                    <DeltaTimeline
-                      startValue={initialFee}
-                      steps={timelineSteps}
-                      finalValue={result.total_fee}
-                      currency="$"
-                    />
-                  )}
-                </>
-              );
-            })()}
           </>
         )}
+
+        {/* ================================================================
+            UNIFIED TIMELINE RENDER BLOCK
+            Backend is the SINGLE SOURCE OF TRUTH for adjustment_timeline.
+            This block is OUTSIDE all state/phase branching.
+            Renders when either result or phase2Result has timeline data.
+            ================================================================ */}
+        {(() => {
+          const timeline = phase2Result?.adjustment_timeline ?? result?.adjustment_timeline;
+
+          // Verification guard for production debugging
+          console.log("TIMELINE_RENDER_CHECK", {
+            hasResultTimeline: !!result?.adjustment_timeline,
+            hasPhase2Timeline: !!phase2Result?.adjustment_timeline,
+            timelineLength: timeline?.length ?? 0,
+          });
+
+          if (!timeline || timeline.length === 0) {
+            return null;
+          }
+
+          return (
+            <>
+              <button
+                type="button"
+                className="timeline-toggle-btn"
+                onClick={() => setShowTimeline(!showTimeline)}
+                aria-expanded={showTimeline}
+              >
+                {showTimeline ? "Hide Fee Adjustment Timeline" : "Show Fee Adjustment Timeline"}
+              </button>
+
+              {showTimeline && (
+                <BackendTimeline
+                  steps={timeline}
+                  currency="$"
+                />
+              )}
+            </>
+          );
+        })()}
 
         {/* PDF Export Button - shown when results are available */}
         {hasExportableResults && (
