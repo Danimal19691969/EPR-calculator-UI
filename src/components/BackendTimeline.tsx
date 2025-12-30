@@ -4,18 +4,23 @@
  * Renders the fee adjustment timeline using ONLY backend-provided data.
  * This component is a pure renderer - it does NOT compute or derive any values.
  *
- * The backend's `adjustment_timeline` field is the SINGLE SOURCE OF TRUTH.
+ * CRITICAL: Uses buildTimelineNodesFromBackend for EXACT PDF parity.
  *
- * CRITICAL ARCHITECTURE RULES:
- * 1. DO NOT recompute or derive timeline steps in this component
- * 2. DO NOT gate rendering by state (Oregon vs Colorado)
- * 3. DO NOT gate rendering by phase
- * 4. DO NOT infer adjustments from other fields
- * 5. ONLY render what the backend provides
+ * ARCHITECTURE INVARIANTS:
+ * 1. Uses shared TimelineNode model from src/timeline/
+ * 2. Uses buildTimelineNodesFromBackend for node construction
+ * 3. Produces IDENTICAL structure to PDF timeline
+ * 4. NO client-side fee math
+ * 5. NO state-based gating (Oregon vs Colorado)
+ *
+ * Node Structure (matching PDF exactly):
+ * - Start: "Base Dues" with running_total as value
+ * - Delta: Adjustment labels with delta amounts
+ * - Final: "Final" with final payable as value
  */
 
-import { useMemo } from "react";
 import type { AdjustmentTimelineStep } from "../services/api";
+import { buildTimelineNodesFromBackend } from "../timeline";
 
 interface BackendTimelineProps {
   /** Backend-provided timeline steps - rendered verbatim */
@@ -24,69 +29,18 @@ interface BackendTimelineProps {
   currency?: string;
 }
 
-/**
- * Safely format a number as currency, returning "$0.00" for NaN/Infinity.
- */
-function fmtMoney(value: number, currency = "$"): string {
-  if (!Number.isFinite(value)) return `${currency}0.00`;
-  const sign = value < 0 ? "-" : "";
-  const abs = Math.abs(value);
-  return `${sign}${currency}${abs.toFixed(2)}`;
-}
-
-/**
- * Format delta with explicit sign prefix
- */
-function fmtDelta(value: number, currency = "$"): string {
-  if (!Number.isFinite(value) || value === 0) return `${currency}0.00`;
-  const prefix = value > 0 ? "+" : "-";
-  return `${prefix}${currency}${Math.abs(value).toFixed(2)}`;
-}
-
 export default function BackendTimeline({
   steps,
   currency = "$",
 }: BackendTimelineProps) {
-  /**
-   * Build the visualization model from backend data.
-   * No client-side computation - just formatting for display.
-   */
-  const model = useMemo(() => {
-    if (!steps || steps.length === 0) {
-      return null;
-    }
+  // Build timeline model using the shared authoritative function
+  const model = buildTimelineNodesFromBackend(steps);
 
-    // Find the starting value (first step's running_total before adjustments)
-    // and the final value (last step with is_final or the last running_total)
-    const firstStep = steps[0];
-    const lastStep = steps[steps.length - 1];
-
-    // Start value: first step's running_total (represents base before adjustments)
-    // OR we can infer from first step if it has amount
-    const startValue = firstStep.running_total;
-
-    // Final value: last step's running_total
-    const finalValue = lastStep.running_total;
-
-    // Calculate max delta for bar normalization
-    const maxAbsDelta = Math.max(
-      ...steps.map((s) => Math.abs(s.amount ?? s.rate_delta ?? 0)),
-      1 // Prevent division by zero
-    );
-
-    return {
-      steps,
-      startValue,
-      finalValue,
-      maxAbsDelta,
-    };
-  }, [steps]);
-
-  if (!model) {
+  if (!model || model.nodes.length === 0) {
     return null;
   }
 
-  // Layout constants
+  // Layout constants - matching PDF layout exactly
   const SVG_WIDTH = 380;
   const SVG_HEIGHT = 180;
   const TIMELINE_Y = 90;
@@ -95,26 +49,19 @@ export default function BackendTimeline({
   const MAX_BAR_HEIGHT = 40;
   const PADDING_X = 40;
 
-  // Build node list: each step becomes a node
-  const nodes = model.steps.map((step, i) => {
-    const delta = step.amount ?? step.rate_delta ?? 0;
-    const isFinal = step.is_final === true || i === model.steps.length - 1;
-
-    return {
-      id: `step-${step.step}`,
-      label: step.label,
-      sublabel: step.description,
-      delta,
-      runningTotal: step.running_total,
-      isFinal,
-      isFirst: i === 0,
-    };
-  });
-
-  // Calculate node positions
+  const { nodes, maxAbsDelta, finalValue } = model;
   const nodeCount = nodes.length;
   const usableWidth = SVG_WIDTH - PADDING_X * 2;
   const nodeSpacing = usableWidth / Math.max(nodeCount - 1, 1);
+
+  /**
+   * Format currency value for readout display.
+   * Using currency prop for flexibility.
+   */
+  function fmtMoney(value: number): string {
+    if (!Number.isFinite(value)) return `${currency}0.00`;
+    return `${currency}${Math.abs(value).toFixed(2)}`;
+  }
 
   return (
     <div className="delta-timeline">
@@ -125,7 +72,7 @@ export default function BackendTimeline({
           <div className="delta-timeline__readout">
             <div className="delta-timeline__readoutLabel">FINAL</div>
             <div className="delta-timeline__readoutValue">
-              {fmtMoney(model.finalValue, currency)}
+              {fmtMoney(finalValue)}
             </div>
           </div>
         </div>
@@ -241,18 +188,20 @@ export default function BackendTimeline({
           {/* Nodes and delta bars */}
           {nodes.map((node, i) => {
             const x = PADDING_X + i * nodeSpacing;
-            const hasDelta = node.delta !== 0;
+            const isStart = node.role === "start";
+            const isFinal = node.role === "final";
+            const isDelta = node.role === "delta";
+            const hasDelta = isDelta && node.delta !== 0;
             const isReduction = node.delta < 0;
 
-            // Node colors
-            let nodeColor = "#00F5FF"; // Cyan default
-            if (node.isFinal) nodeColor = "#00FF9A"; // Green for final
-            else if (node.isFirst) nodeColor = "#00F5FF"; // Cyan for first
+            // Node colors - matching PDF exactly
+            let nodeColor = "#00F5FF"; // Cyan for start
+            if (isFinal) nodeColor = "#00FF9A"; // Green for final
             else if (isReduction) nodeColor = "#00FF9A"; // Green for reductions
             else if (hasDelta) nodeColor = "#FF4DFF"; // Magenta for increases
 
-            const radius = node.isFinal ? FINAL_NODE_RADIUS : NODE_RADIUS;
-            const glowFilter = node.isFinal ? "url(#btGlowStrong)" : "url(#btGlow)";
+            const radius = isFinal ? FINAL_NODE_RADIUS : NODE_RADIUS;
+            const glowFilter = isFinal ? "url(#btGlowStrong)" : "url(#btGlow)";
 
             // Delta bar dimensions
             let barHeight = 0;
@@ -261,7 +210,7 @@ export default function BackendTimeline({
 
             if (hasDelta) {
               const normalizedHeight =
-                (Math.abs(node.delta) / model.maxAbsDelta) * MAX_BAR_HEIGHT;
+                (Math.abs(node.delta) / maxAbsDelta) * MAX_BAR_HEIGHT;
               barHeight = Math.max(6, normalizedHeight);
 
               if (isReduction) {
@@ -301,7 +250,7 @@ export default function BackendTimeline({
                 />
 
                 {/* Inner glow for final node */}
-                {node.isFinal && (
+                {isFinal && (
                   <circle
                     cx={x}
                     cy={TIMELINE_Y}
@@ -324,8 +273,8 @@ export default function BackendTimeline({
                   {node.label}
                 </text>
 
-                {/* Delta value (only for nodes with delta) */}
-                {hasDelta && (
+                {/* Delta value (only for delta nodes) */}
+                {isDelta && node.deltaDisplay && (
                   <text
                     x={x}
                     y={isReduction ? barY + barHeight + 14 : barY - 6}
@@ -335,22 +284,22 @@ export default function BackendTimeline({
                     fontWeight="700"
                     opacity="0.95"
                   >
-                    {fmtDelta(node.delta, currency)}
+                    {node.deltaDisplay}
                   </text>
                 )}
 
-                {/* Running total below timeline (for first and final only) */}
-                {(node.isFirst || node.isFinal) && (
+                {/* Value display for start/final nodes (matching PDF exactly) */}
+                {(isStart || isFinal) && node.valueDisplay && (
                   <text
                     x={x}
                     y={TIMELINE_Y + 28}
                     textAnchor="middle"
                     fill="#CDE7FF"
                     fontSize="11"
-                    fontWeight={node.isFinal ? "700" : "500"}
-                    opacity={node.isFinal ? "1" : "0.8"}
+                    fontWeight={isFinal ? "700" : "500"}
+                    opacity={isFinal ? "1" : "0.8"}
                   >
-                    {fmtMoney(node.runningTotal, currency)}
+                    {node.valueDisplay}
                   </text>
                 )}
               </g>
