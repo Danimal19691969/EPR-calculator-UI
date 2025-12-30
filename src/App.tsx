@@ -6,6 +6,7 @@ import {
   fetchColoradoPhase2Groups,
   calculateColoradoPhase2,
 } from "./services/api";
+import { ENABLE_TIMELINE, ENABLE_PDF_EXPORT } from "./config/featureFlags";
 import type {
   Material,
   CalculateResponse,
@@ -433,6 +434,7 @@ export default function App() {
    * Build PDF export data and trigger download.
    */
   const handleExportPDF = useCallback(async () => {
+    if (!ENABLE_PDF_EXPORT) return;
     if (!printableLayoutRef.current) return;
 
     setIsExporting(true);
@@ -1016,7 +1018,7 @@ export default function App() {
             This block is OUTSIDE all state/phase branching.
             Renders when either result or phase2Result has timeline data.
             ================================================================ */}
-        {(() => {
+        {ENABLE_TIMELINE && (() => {
           const timeline = phase2Result?.adjustment_timeline ?? result?.adjustment_timeline;
 
           // Verification guard for production debugging
@@ -1052,7 +1054,7 @@ export default function App() {
         })()}
 
         {/* PDF Export Button - shown when results are available */}
-        {hasExportableResults && (
+        {ENABLE_PDF_EXPORT && hasExportableResults && (
           <button
             type="button"
             className="pdf-export-btn"
@@ -1067,14 +1069,14 @@ export default function App() {
 
       {/* Hidden Printable Layout for PDF Export */}
       {/* Colorado Phase 2: Use snapshot-based V2 component for guaranteed UI/PDF parity */}
-      {isColoradoPhase2 && coloradoPhase2Snapshot && (
+      {ENABLE_PDF_EXPORT && isColoradoPhase2 && coloradoPhase2Snapshot && (
         <PrintableResultsLayoutV2
           ref={printableLayoutRef}
           snapshot={coloradoPhase2Snapshot}
         />
       )}
       {/* Oregon/Other: Use legacy component (Oregon is not being refactored) */}
-      {!isColoradoPhase2 && hasExportableResults && (
+      {ENABLE_PDF_EXPORT && !isColoradoPhase2 && hasExportableResults && (
         <PrintableResultsLayout
           ref={printableLayoutRef}
           state={state}
