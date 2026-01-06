@@ -18,17 +18,9 @@ export default function Disclaimer() {
       </div>
 
       <p>
-        This packaging EPR fee estimator provides estimates for general
-        informational purposes only and is not an official fee calculation.
-        This tool does not constitute legal or compliance advice. Material
-        categories and fee rates are subject to change.
+        <b>Disclaimer:</b> This packaging EPR fee estimation tool is provided for general informational purposes only. The estimates this tool generates are non-binding, not an official fee calculation, and the results depend on the accuracy and completeness of User inputs. The tool does not provide legal or compliance advice, and material categories and fee rates are subject to change. User agrees to indemnify, defend, and hold harmless Portco Packaging, its affiliates, and their respective officers, employees, and agents from any claims, losses, liabilities, penalties, enforcement actions, costs, or expenses (including reasonable attorneys’ fees) arising from or related to User’s use of or reliance on the tool.
       </p>
 
-      <p>
-        Producers must consult with compliance professionals, the state agency,
-        and/or the applicable producer responsibility organization to confirm
-        their compliance obligation and total fees.
-      </p>
     </div>
   );
 }
